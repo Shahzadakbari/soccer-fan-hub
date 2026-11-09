@@ -1,6 +1,6 @@
 /**
  * TACTICHUB - Ultimate Football Squad & Tactics Hub
- * Phase 1 & 2: Manager Dashboard, Top Navigation Header, Player Directory
+ * Phase 1, 2 & 3: Manager Dashboard, Top Navigation Header, Player Directory, Player Profile
  * Global State and Core Functions
  */
 
@@ -10,6 +10,9 @@ let managerState = {
     squad: [],              // Array of players in the squad
     watchlist: []           // Array of starred players for scouting
 };
+
+// Current player being viewed in profile
+let currentPlayerProfile = null;
 
 // Predefined Player Database
 const playerDatabase = [
@@ -23,7 +26,16 @@ const playerDatabase = [
         transferFee: 180.0,
         rating: 91,
         nationality: "France",
-        age: 25
+        age: 25,
+        attributes: {
+            pace: 97,
+            shooting: 92,
+            passing: 85,
+            dribbling: 92,
+            defending: 35,
+            physicality: 78
+        },
+        photo: "https://via.placeholder.com/150/22c55e/ffffff?text=MB"
     },
     {
         id: 2,
@@ -34,7 +46,16 @@ const playerDatabase = [
         transferFee: 175.0,
         rating: 91,
         nationality: "Norway",
-        age: 24
+        age: 24,
+        attributes: {
+            pace: 89,
+            shooting: 94,
+            passing: 75,
+            dribbling: 80,
+            defending: 40,
+            physicality: 88
+        },
+        photo: "https://via.placeholder.com/150/22c55e/ffffff?text=EH"
     },
     {
         id: 3,
@@ -45,7 +66,16 @@ const playerDatabase = [
         transferFee: 120.0,
         rating: 89,
         nationality: "Brazil",
-        age: 24
+        age: 24,
+        attributes: {
+            pace: 95,
+            shooting: 82,
+            passing: 80,
+            dribbling: 93,
+            defending: 30,
+            physicality: 70
+        },
+        photo: "https://via.placeholder.com/150/22c55e/ffffff?text=VJ"
     },
     {
         id: 4,
@@ -56,7 +86,16 @@ const playerDatabase = [
         transferFee: 100.0,
         rating: 90,
         nationality: "England",
-        age: 31
+        age: 31,
+        attributes: {
+            pace: 75,
+            shooting: 93,
+            passing: 88,
+            dribbling: 80,
+            defending: 45,
+            physicality: 85
+        },
+        photo: "https://via.placeholder.com/150/22c55e/ffffff?text=HK"
     },
     
     // Midfielders
@@ -69,7 +108,16 @@ const playerDatabase = [
         transferFee: 180.0,
         rating: 90,
         nationality: "England",
-        age: 21
+        age: 21,
+        attributes: {
+            pace: 80,
+            shooting: 88,
+            passing: 86,
+            dribbling: 85,
+            defending: 78,
+            physicality: 82
+        },
+        photo: "https://via.placeholder.com/150/3b82f6/ffffff?text=JB"
     },
     {
         id: 6,
@@ -80,7 +128,16 @@ const playerDatabase = [
         transferFee: 100.0,
         rating: 91,
         nationality: "Belgium",
-        age: 33
+        age: 33,
+        attributes: {
+            pace: 78,
+            shooting: 92,
+            passing: 95,
+            dribbling: 88,
+            defending: 65,
+            physicality: 78
+        },
+        photo: "https://via.placeholder.com/150/3b82f6/ffffff?text=KDB"
     },
     {
         id: 7,
@@ -91,7 +148,16 @@ const playerDatabase = [
         transferFee: 120.0,
         rating: 90,
         nationality: "Spain",
-        age: 28
+        age: 28,
+        attributes: {
+            pace: 75,
+            shooting: 82,
+            passing: 90,
+            dribbling: 80,
+            defending: 85,
+            physicality: 88
+        },
+        photo: "https://via.placeholder.com/150/3b82f6/ffffff?text=R"
     },
     {
         id: 8,
@@ -102,7 +168,16 @@ const playerDatabase = [
         transferFee: 150.0,
         rating: 89,
         nationality: "Spain",
-        age: 22
+        age: 22,
+        attributes: {
+            pace: 82,
+            shooting: 78,
+            passing: 90,
+            dribbling: 92,
+            defending: 60,
+            physicality: 70
+        },
+        photo: "https://via.placeholder.com/150/3b82f6/ffffff?text=P"
     },
     
     // Defenders
@@ -115,7 +190,16 @@ const playerDatabase = [
         transferFee: 80.0,
         rating: 89,
         nationality: "Netherlands",
-        age: 33
+        age: 33,
+        attributes: {
+            pace: 75,
+            shooting: 65,
+            passing: 80,
+            dribbling: 60,
+            defending: 92,
+            physicality: 90
+        },
+        photo: "https://via.placeholder.com/150/10b981/ffffff?text=VVD"
     },
     {
         id: 10,
@@ -126,7 +210,16 @@ const playerDatabase = [
         transferFee: 90.0,
         rating: 89,
         nationality: "Portugal",
-        age: 27
+        age: 27,
+        attributes: {
+            pace: 78,
+            shooting: 55,
+            passing: 82,
+            dribbling: 65,
+            defending: 90,
+            physicality: 88
+        },
+        photo: "https://via.placeholder.com/150/10b981/ffffff?text=RD"
     },
     {
         id: 11,
@@ -137,7 +230,16 @@ const playerDatabase = [
         transferFee: 70.0,
         rating: 87,
         nationality: "Germany",
-        age: 31
+        age: 31,
+        attributes: {
+            pace: 80,
+            shooting: 50,
+            passing: 75,
+            dribbling: 60,
+            defending: 88,
+            physicality: 90
+        },
+        photo: "https://via.placeholder.com/150/10b981/ffffff?text=AR"
     },
     {
         id: 12,
@@ -148,7 +250,16 @@ const playerDatabase = [
         transferFee: 85.0,
         rating: 88,
         nationality: "Morocco",
-        age: 25
+        age: 25,
+        attributes: {
+            pace: 95,
+            shooting: 70,
+            passing: 78,
+            dribbling: 82,
+            defending: 78,
+            physicality: 75
+        },
+        photo: "https://via.placeholder.com/150/10b981/ffffff?text=AH"
     },
     
     // Goalkeepers
@@ -161,7 +272,16 @@ const playerDatabase = [
         transferFee: 60.0,
         rating: 89,
         nationality: "Belgium",
-        age: 32
+        age: 32,
+        attributes: {
+            pace: 50,
+            shooting: 40,
+            passing: 65,
+            dribbling: 50,
+            defending: 80,
+            physicality: 75
+        },
+        photo: "https://via.placeholder.com/150/8b5cf6/ffffff?text=TC"
     },
     {
         id: 14,
@@ -172,7 +292,16 @@ const playerDatabase = [
         transferFee: 65.0,
         rating: 89,
         nationality: "Brazil",
-        age: 32
+        age: 32,
+        attributes: {
+            pace: 55,
+            shooting: 45,
+            passing: 70,
+            dribbling: 55,
+            defending: 82,
+            physicality: 78
+        },
+        photo: "https://via.placeholder.com/150/8b5cf6/ffffff?text=AB"
     },
     {
         id: 15,
@@ -183,7 +312,16 @@ const playerDatabase = [
         transferFee: 50.0,
         rating: 88,
         nationality: "Germany",
-        age: 32
+        age: 32,
+        attributes: {
+            pace: 50,
+            shooting: 40,
+            passing: 75,
+            dribbling: 55,
+            defending: 80,
+            physicality: 70
+        },
+        photo: "https://via.placeholder.com/150/8b5cf6/ffffff?text=MATS"
     },
     {
         id: 16,
@@ -194,7 +332,16 @@ const playerDatabase = [
         transferFee: 55.0,
         rating: 87,
         nationality: "France",
-        age: 29
+        age: 29,
+        attributes: {
+            pace: 55,
+            shooting: 40,
+            passing: 65,
+            dribbling: 50,
+            defending: 85,
+            physicality: 80
+        },
+        photo: "https://via.placeholder.com/150/8b5cf6/ffffff?text=MM"
     }
 ];
 
@@ -255,6 +402,249 @@ function switchView(viewName) {
     // Initialize player directory when switching to it
     if (viewName === 'player-directory') {
         renderPlayerDirectory();
+    }
+    
+    // Clear current player profile when leaving profile view
+    if (viewName !== 'player-profile') {
+        currentPlayerProfile = null;
+    }
+}
+
+/**
+ * Display a player's profile
+ * @param {number} playerId - The ID of the player to display
+ */
+function displayPlayerProfile(playerId) {
+    const player = playerDatabase.find(p => p.id === playerId);
+    if (!player) return;
+    
+    currentPlayerProfile = player;
+    
+    // Update profile header
+    document.getElementById('profile-name').textContent = player.name;
+    document.getElementById('profile-club').textContent = player.club;
+    document.getElementById('profile-value').textContent = `€${player.marketValue.toFixed(1)}M`;
+    document.getElementById('profile-rating').textContent = player.rating;
+    document.getElementById('profile-nationality').textContent = player.nationality;
+    document.getElementById('profile-age').textContent = player.age;
+    
+    // Update position badge
+    const positionBadge = document.getElementById('profile-position-badge');
+    positionBadge.innerHTML = `
+        <span class="${positionColors[player.position]} text-xs font-bold px-3 py-1 rounded-full uppercase">
+            <i class="fas ${positionIcons[player.position]} mr-1"></i> ${player.position}
+        </span>
+    `;
+    
+    // Update skill attributes
+    if (player.attributes) {
+        updateAttributeBar('pace', player.attributes.pace);
+        updateAttributeBar('shooting', player.attributes.shooting);
+        updateAttributeBar('passing', player.attributes.passing);
+        updateAttributeBar('dribbling', player.attributes.dribbling);
+        updateAttributeBar('defending', player.attributes.defending);
+        updateAttributeBar('physicality', player.attributes.physicality);
+    }
+    
+    // Load and display scouting notes for this player
+    loadScoutingNotes(playerId);
+    
+    // Clear the note input
+    document.getElementById('scouting-note-input').value = '';
+}
+
+/**
+ * Update a single attribute bar display
+ * @param {string} attrName - The attribute name (pace, shooting, etc.)
+ * @param {number} value - The attribute value (0-100)
+ */
+function updateAttributeBar(attrName, value) {
+    const valueEl = document.getElementById(`attr-${attrName}-value`);
+    const barEl = document.getElementById(`attr-${attrName}-bar`);
+    
+    if (valueEl && barEl) {
+        valueEl.textContent = value;
+        barEl.style.width = `${value}%`;
+    }
+}
+
+/**
+ * Save a scouting note to localStorage
+ */
+function saveScoutingNote() {
+    if (!currentPlayerProfile) {
+        alert('No player selected! Please select a player first.');
+        return;
+    }
+    
+    const noteInput = document.getElementById('scouting-note-input');
+    const noteText = noteInput.value.trim();
+    
+    if (!noteText) {
+        alert('Please enter a note before saving.');
+        return;
+    }
+    
+    // Get existing notes from localStorage
+    const storageKey = `scoutingNotes_${currentPlayerProfile.id}`;
+    let notes = JSON.parse(localStorage.getItem(storageKey)) || [];
+    
+    // Create new note object
+    const newNote = {
+        id: Date.now(),
+        playerId: currentPlayerProfile.id,
+        content: noteText,
+        timestamp: new Date().toISOString(),
+        playerName: currentPlayerProfile.name
+    };
+    
+    // Add to notes array
+    notes.push(newNote);
+    
+    // Save back to localStorage
+    localStorage.setItem(storageKey, JSON.stringify(notes));
+    
+    // Clear input and refresh display
+    noteInput.value = '';
+    loadScoutingNotes(currentPlayerProfile.id);
+    
+    alert('✅ Scouting note saved successfully!');
+}
+
+/**
+ * Load scouting notes from localStorage and display them
+ * @param {number} playerId - The player ID to load notes for
+ */
+function loadScoutingNotes(playerId) {
+    const storageKey = `scoutingNotes_${playerId}`;
+    const notes = JSON.parse(localStorage.getItem(storageKey)) || [];
+    
+    const notesList = document.getElementById('scouting-notes-list');
+    
+    if (notes.length === 0) {
+        notesList.innerHTML = '<p class="text-slate-500 text-center py-6">No scouting notes yet. Add your first note!</p>';
+        return;
+    }
+    
+    let html = '';
+    notes.forEach(note => {
+        const date = new Date(note.timestamp);
+        const formattedDate = date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        html += `
+            <div class="bg-slate-700/50 rounded-lg p-4 border border-slate-600/50">
+                <div class="flex items-start justify-between mb-2">
+                    <div class="flex-1">
+                        <p class="text-white font-medium mb-1">${note.content}</p>
+                        <p class="text-slate-400 text-xs">
+                            <i class="fas fa-clock mr-1"></i>
+                            ${formattedDate}
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center justify-end space-x-2">
+                    <button 
+                        onclick="editScoutingNote(${note.id}, ${note.playerId})"
+                        class="text-slate-400 hover:text-emerald-400 text-xs transition-colors"
+                    >
+                        <i class="fas fa-edit mr-1"></i> Edit
+                    </button>
+                    <button 
+                        onclick="deleteScoutingNote(${note.id}, ${note.playerId})"
+                        class="text-slate-400 hover:text-red-400 text-xs transition-colors"
+                    >
+                        <i class="fas fa-trash mr-1"></i> Delete
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    
+    notesList.innerHTML = html;
+}
+
+/**
+ * Edit a scouting note
+ * @param {number} noteId - The note ID to edit
+ * @param {number} playerId - The player ID the note belongs to
+ */
+function editScoutingNote(noteId, playerId) {
+    const storageKey = `scoutingNotes_${playerId}`;
+    const notes = JSON.parse(localStorage.getItem(storageKey)) || [];
+    
+    const noteToEdit = notes.find(n => n.id === noteId);
+    if (!noteToEdit) return;
+    
+    // Prompt user for new content
+    const newContent = prompt('Edit your scouting note:', noteToEdit.content);
+    if (newContent === null) return; // User cancelled
+    
+    if (newContent.trim() === '') {
+        alert('Note cannot be empty!');
+        return;
+    }
+    
+    // Update the note
+    noteToEdit.content = newContent.trim();
+    noteToEdit.timestamp = new Date().toISOString();
+    
+    // Save back to localStorage
+    localStorage.setItem(storageKey, JSON.stringify(notes));
+    
+    // Refresh display
+    loadScoutingNotes(playerId);
+    
+    alert('✅ Scouting note updated successfully!');
+}
+
+/**
+ * Delete a scouting note
+ * @param {number} noteId - The note ID to delete
+ * @param {number} playerId - The player ID the note belongs to
+ */
+function deleteScoutingNote(noteId, playerId) {
+    if (!confirm('Are you sure you want to delete this note?')) {
+        return;
+    }
+    
+    const storageKey = `scoutingNotes_${playerId}`;
+    let notes = JSON.parse(localStorage.getItem(storageKey)) || [];
+    
+    // Filter out the note to delete
+    notes = notes.filter(n => n.id !== noteId);
+    
+    // Save back to localStorage
+    localStorage.setItem(storageKey, JSON.stringify(notes));
+    
+    // Refresh display
+    loadScoutingNotes(playerId);
+    
+    alert('✅ Scouting note deleted successfully!');
+}
+
+/**
+ * Clear the note input field
+ */
+function clearNoteInput() {
+    document.getElementById('scouting-note-input').value = '';
+}
+
+/**
+ * View a player's profile (navigate to player profile view)
+ * @param {number} playerId - The ID of the player to view
+ */
+function viewPlayerProfile(playerId) {
+    const player = playerDatabase.find(p => p.id === playerId);
+    if (player) {
+        currentPlayerProfile = player;
+        switchView('player-profile');
+        displayPlayerProfile(playerId);
     }
 }
 
@@ -428,19 +818,6 @@ function addToSquad(playerId) {
 }
 
 /**
- * View a player's profile (navigate to player profile view)
- * @param {number} playerId - The ID of the player to view
- */
-function viewPlayerProfile(playerId) {
-    const player = playerDatabase.find(p => p.id === playerId);
-    if (player) {
-        // Store the current player in state for the profile view
-        window.currentPlayerProfile = player;
-        switchView('player-profile');
-    }
-}
-
-/**
  * Calculate and update all dashboard statistics
  */
 function updateDashboardStats() {
@@ -487,7 +864,6 @@ function updateWatchlistDisplay() {
 
     let html = '';
     managerState.watchlist.forEach((player, index) => {
-        const originalPlayer = playerDatabase.find(p => p.id === player.id);
         html += `
             <div class="bg-slate-700/50 rounded-lg p-4 mb-3 border border-slate-600/50">
                 <div class="flex items-center justify-between">
@@ -587,11 +963,18 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = { 
         managerState, 
         playerDatabase,
+        currentPlayerProfile,
         switchView, 
         exportSquadCSV,
         filterPlayers,
         toggleWatchlist,
         addToSquad,
-        viewPlayerProfile
+        viewPlayerProfile,
+        displayPlayerProfile,
+        saveScoutingNote,
+        loadScoutingNotes,
+        editScoutingNote,
+        deleteScoutingNote,
+        clearNoteInput
     };
 }

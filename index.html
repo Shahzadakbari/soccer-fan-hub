@@ -218,11 +218,204 @@
             </div>
         </section>
 
+        <!-- Player Profile View -->
         <section id="player-profile" class="view-section hidden">
-            <div class="text-center py-20">
-                <i class="fas fa-user text-6xl text-slate-600 mb-4"></i>
-                <h2 class="text-2xl font-bold text-white mb-2">Player Profile</h2>
-                <p class="text-slate-400">Coming soon in Phase 2</p>
+            <!-- Back Button -->
+            <button onclick="switchView('player-directory')" class="mb-6 flex items-center space-x-2 text-slate-400 hover:text-white transition-colors">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to Player Directory</span>
+            </button>
+
+            <!-- Player Detail Card -->
+            <div class="bg-slate-800 rounded-xl p-8 border border-slate-700 mb-8">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Player Photo & Header -->
+                    <div class="lg:col-span-1">
+                        <div class="text-center lg:text-left">
+                            <!-- Photo Placeholder -->
+                            <div class="w-48 h-48 mx-auto lg:mx-0 mb-6 bg-slate-700 rounded-2xl flex items-center justify-center border-4 border-emerald-500/30">
+                                <i class="fas fa-user-circle text-6xl text-emerald-500/50"></i>
+                            </div>
+                            
+                            <!-- Position Badge -->
+                            <div id="profile-position-badge" class="inline-block mb-3">
+                                <span class="bg-blue-500/20 text-blue-400 text-xs font-bold px-3 py-1 rounded-full uppercase">
+                                    <i class="fas fa-running mr-1"></i> Midfielder
+                                </span>
+                            </div>
+                            
+                            <!-- Player Name -->
+                            <h2 id="profile-name" class="text-3xl font-bold text-white mb-2">Player Name</h2>
+                            
+                            <!-- Club & Details -->
+                            <p id="profile-club" class="text-xl text-slate-300 mb-4">Club Name</p>
+                            
+                            <div class="space-y-3 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-slate-400">Market Value:</span>
+                                    <span id="profile-value" class="text-emerald-400 font-medium">€0.0M</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-400">Overall Rating:</span>
+                                    <span id="profile-rating" class="text-white font-bold text-lg">0</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-400">Nationality:</span>
+                                    <span id="profile-nationality" class="text-slate-300">N/A</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-400">Age:</span>
+                                    <span id="profile-age" class="text-slate-300">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Skill Attributes -->
+                    <div class="lg:col-span-2">
+                        <h3 class="text-xl font-bold text-white mb-6">Skill Attributes</h3>
+                        
+                        <div class="space-y-4">
+                            <!-- Pace -->
+                            <div class="attribute-bar">
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="text-slate-300 font-medium">Pace</span>
+                                    <span id="attr-pace-value" class="text-emerald-400 font-bold">0</span>
+                                </div>
+                                <div class="w-full bg-slate-700 rounded-full h-3">
+                                    <div id="attr-pace-bar" class="bg-emerald-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Shooting -->
+                            <div class="attribute-bar">
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="text-slate-300 font-medium">Shooting</span>
+                                    <span id="attr-shooting-value" class="text-emerald-400 font-bold">0</span>
+                                </div>
+                                <div class="w-full bg-slate-700 rounded-full h-3">
+                                    <div id="attr-shooting-bar" class="bg-emerald-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Passing -->
+                            <div class="attribute-bar">
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="text-slate-300 font-medium">Passing</span>
+                                    <span id="attr-passing-value" class="text-emerald-400 font-bold">0</span>
+                                </div>
+                                <div class="w-full bg-slate-700 rounded-full h-3">
+                                    <div id="attr-passing-bar" class="bg-emerald-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Dribbling -->
+                            <div class="attribute-bar">
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="text-slate-300 font-medium">Dribbling</span>
+                                    <span id="attr-dribbling-value" class="text-emerald-400 font-bold">0</span>
+                                </div>
+                                <div class="w-full bg-slate-700 rounded-full h-3">
+                                    <div id="attr-dribbling-bar" class="bg-emerald-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Defending -->
+                            <div class="attribute-bar">
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="text-slate-300 font-medium">Defending</span>
+                                    <span id="attr-defending-value" class="text-emerald-400 font-bold">0</span>
+                                </div>
+                                <div class="w-full bg-slate-700 rounded-full h-3">
+                                    <div id="attr-defending-bar" class="bg-emerald-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Physicality -->
+                            <div class="attribute-bar">
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="text-slate-300 font-medium">Physicality</span>
+                                    <span id="attr-physicality-value" class="text-emerald-400 font-bold">0</span>
+                                </div>
+                                <div class="w-full bg-slate-700 rounded-full h-3">
+                                    <div id="attr-physicality-bar" class="bg-emerald-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Match Highlights Section -->
+            <div class="bg-slate-800 rounded-xl p-8 border border-slate-700 mb-8">
+                <h3 class="text-xl font-bold text-white mb-6">
+                    <i class="fas fa-play-circle text-emerald-500 mr-2"></i>
+                    Match Highlights
+                </h3>
+                
+                <div class="bg-slate-700/50 rounded-xl p-6 border border-slate-600/50 text-center">
+                    <i class="fas fa-video text-6xl text-slate-500 mb-4"></i>
+                    <p class="text-slate-400 mb-4">Video Highlights Placeholder</p>
+                    <p class="text-slate-500 text-sm">Match footage and skills reel would be displayed here</p>
+                    
+                    <!-- Video Controls Placeholder -->
+                    <div class="flex items-center justify-center space-x-4 mt-6">
+                        <button class="w-12 h-12 bg-emerald-500/20 rounded-full flex items-center justify-center text-emerald-400 hover:bg-emerald-500/30 transition-colors">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <button class="w-12 h-12 bg-slate-600/50 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-600 transition-colors">
+                            <i class="fas fa-pause"></i>
+                        </button>
+                        <button class="w-12 h-12 bg-slate-600/50 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-600 transition-colors">
+                            <i class="fas fa-step-backward"></i>
+                        </button>
+                        <button class="w-12 h-12 bg-slate-600/50 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-600 transition-colors">
+                            <i class="fas fa-step-forward"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Personal Scouting Notes Section -->
+            <div class="bg-slate-800 rounded-xl p-8 border border-slate-700">
+                <h3 class="text-xl font-bold text-white mb-6">
+                    <i class="fas fa-sticky-note text-emerald-500 mr-2"></i>
+                    Personal Scouting Notes
+                </h3>
+                
+                <!-- Note Input Area -->
+                <div class="mb-6">
+                    <textarea 
+                        id="scouting-note-input"
+                        placeholder="Write your scouting notes here... (e.g., 'Excellent vision, great at set pieces, needs to improve stamina...')"
+                        rows="4"
+                        class="w-full bg-slate-700/50 border border-slate-600 rounded-lg p-4 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all resize-none"
+                    ></textarea>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="flex items-center justify-start space-x-3 mb-6">
+                    <button 
+                        onclick="saveScoutingNote()"
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-6 py-2 rounded-lg transition-colors flex items-center space-x-2"
+                    >
+                        <i class="fas fa-save"></i>
+                        <span>Save Note</span>
+                    </button>
+                    
+                    <button 
+                        onclick="clearNoteInput()"
+                        class="bg-slate-600 hover:bg-slate-500 text-slate-200 font-medium px-6 py-2 rounded-lg transition-colors flex items-center space-x-2"
+                    >
+                        <i class="fas fa-times"></i>
+                        <span>Clear</span>
+                    </button>
+                </div>
+                
+                <!-- Saved Notes List -->
+                <div id="scouting-notes-list" class="space-y-4">
+                    <p class="text-slate-500 text-center py-6">No scouting notes yet. Add your first note!</p>
+                </div>
             </div>
         </section>
 
