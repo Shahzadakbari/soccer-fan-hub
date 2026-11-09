@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import {
   ArrowDownToLine,
   ArrowLeft,
@@ -7,13 +7,22 @@ import {
   BadgeEuro,
   CircleCheck,
   CircleDot,
+  CirclePlay,
   ClipboardList,
+  Clock3,
+  Edit3,
   LayoutDashboard,
+  Pause,
+  Play,
+  Plus,
+  SkipBack,
+  SkipForward,
   Search,
   Shield,
   SlidersHorizontal,
   Sparkles,
   Star,
+  Trash2,
   UserRound,
   UsersRound,
   UserPlus,
@@ -30,7 +39,17 @@ type Player = {
   rating: number;
   nationality: string;
   age: number;
+  attributes: {
+    pace: number;
+    shooting: number;
+    passing: number;
+    dribbling: number;
+    defending: number;
+    physicality: number;
+  };
 };
+
+type ScoutingNote = { id: string; playerId: number; content: string; timestamp: string; playerName?: string };
 
 type ManagerState = {
   budget: number;
@@ -46,39 +65,34 @@ const managerState: ManagerState = {
   watchlist: [],
 };
 
-const navItems: { key: ViewKey; label: string; icon: typeof LayoutDashboard; phaseTwo?: boolean }[] = [
+const navItems: { key: ViewKey; label: string; icon: typeof LayoutDashboard; upcoming?: boolean }[] = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { key: 'directory', label: 'Player Directory', icon: UsersRound },
-  { key: 'profile', label: 'Player Profile', icon: UserRound, phaseTwo: true },
-  { key: 'compare', label: 'Compare Players', icon: ArrowLeftRight, phaseTwo: true },
-  { key: 'builder', label: 'Squad Builder', icon: ClipboardList, phaseTwo: true },
+  { key: 'profile', label: 'Player Profile', icon: UserRound },
+  { key: 'compare', label: 'Compare Players', icon: ArrowLeftRight, upcoming: true },
+  { key: 'builder', label: 'Squad Builder', icon: ClipboardList, upcoming: true },
 ];
 
 const players: Player[] = [
-  { id: 1, name: 'Kylian Mbappé', position: 'Forward', club: 'PSG', marketValue: 180, transferFee: 180, rating: 91, nationality: 'France', age: 25 },
-  { id: 2, name: 'Erling Haaland', position: 'Forward', club: 'Manchester City', marketValue: 175, transferFee: 175, rating: 91, nationality: 'Norway', age: 24 },
-  { id: 3, name: 'Vinícius Júnior', position: 'Forward', club: 'Real Madrid', marketValue: 120, transferFee: 120, rating: 89, nationality: 'Brazil', age: 24 },
-  { id: 4, name: 'Harry Kane', position: 'Forward', club: 'Bayern Munich', marketValue: 100, transferFee: 100, rating: 90, nationality: 'England', age: 31 },
-  { id: 5, name: 'Jude Bellingham', position: 'Midfielder', club: 'Real Madrid', marketValue: 180, transferFee: 180, rating: 90, nationality: 'England', age: 21 },
-  { id: 6, name: 'Kevin De Bruyne', position: 'Midfielder', club: 'Manchester City', marketValue: 100, transferFee: 100, rating: 91, nationality: 'Belgium', age: 33 },
-  { id: 7, name: 'Rodri', position: 'Midfielder', club: 'Manchester City', marketValue: 120, transferFee: 120, rating: 90, nationality: 'Spain', age: 28 },
-  { id: 8, name: 'Pedri', position: 'Midfielder', club: 'Barcelona', marketValue: 150, transferFee: 150, rating: 89, nationality: 'Spain', age: 22 },
-  { id: 9, name: 'Virgil van Dijk', position: 'Defender', club: 'Liverpool', marketValue: 80, transferFee: 80, rating: 89, nationality: 'Netherlands', age: 33 },
-  { id: 10, name: 'Rúben Dias', position: 'Defender', club: 'Manchester City', marketValue: 90, transferFee: 90, rating: 89, nationality: 'Portugal', age: 27 },
-  { id: 11, name: 'Antonio Rüdiger', position: 'Defender', club: 'Real Madrid', marketValue: 70, transferFee: 70, rating: 87, nationality: 'Germany', age: 31 },
-  { id: 12, name: 'Achraf Hakimi', position: 'Defender', club: 'PSG', marketValue: 85, transferFee: 85, rating: 88, nationality: 'Morocco', age: 25 },
-  { id: 13, name: 'Thibaut Courtois', position: 'Goalkeeper', club: 'Real Madrid', marketValue: 60, transferFee: 60, rating: 89, nationality: 'Belgium', age: 32 },
-  { id: 14, name: 'Alisson Becker', position: 'Goalkeeper', club: 'Liverpool', marketValue: 65, transferFee: 65, rating: 89, nationality: 'Brazil', age: 32 },
-  { id: 15, name: 'Marc-André ter Stegen', position: 'Goalkeeper', club: 'Barcelona', marketValue: 50, transferFee: 50, rating: 88, nationality: 'Germany', age: 32 },
-  { id: 16, name: 'Mike Maignan', position: 'Goalkeeper', club: 'AC Milan', marketValue: 55, transferFee: 55, rating: 87, nationality: 'France', age: 29 },
+  { id: 1, name: 'Kylian Mbappé', position: 'Forward', club: 'PSG', marketValue: 180, transferFee: 180, rating: 91, nationality: 'France', age: 25, attributes: { pace: 97, shooting: 92, passing: 85, dribbling: 92, defending: 35, physicality: 78 } },
+  { id: 2, name: 'Erling Haaland', position: 'Forward', club: 'Manchester City', marketValue: 175, transferFee: 175, rating: 91, nationality: 'Norway', age: 24, attributes: { pace: 89, shooting: 94, passing: 75, dribbling: 80, defending: 40, physicality: 88 } },
+  { id: 3, name: 'Vinícius Júnior', position: 'Forward', club: 'Real Madrid', marketValue: 120, transferFee: 120, rating: 89, nationality: 'Brazil', age: 24, attributes: { pace: 95, shooting: 82, passing: 80, dribbling: 93, defending: 30, physicality: 70 } },
+  { id: 4, name: 'Harry Kane', position: 'Forward', club: 'Bayern Munich', marketValue: 100, transferFee: 100, rating: 90, nationality: 'England', age: 31, attributes: { pace: 75, shooting: 93, passing: 88, dribbling: 80, defending: 45, physicality: 85 } },
+  { id: 5, name: 'Jude Bellingham', position: 'Midfielder', club: 'Real Madrid', marketValue: 180, transferFee: 180, rating: 90, nationality: 'England', age: 21, attributes: { pace: 80, shooting: 88, passing: 86, dribbling: 85, defending: 78, physicality: 82 } },
+  { id: 6, name: 'Kevin De Bruyne', position: 'Midfielder', club: 'Manchester City', marketValue: 100, transferFee: 100, rating: 91, nationality: 'Belgium', age: 33, attributes: { pace: 78, shooting: 92, passing: 95, dribbling: 88, defending: 65, physicality: 78 } },
+  { id: 7, name: 'Rodri', position: 'Midfielder', club: 'Manchester City', marketValue: 120, transferFee: 120, rating: 90, nationality: 'Spain', age: 28, attributes: { pace: 75, shooting: 82, passing: 90, dribbling: 80, defending: 85, physicality: 88 } },
+  { id: 8, name: 'Pedri', position: 'Midfielder', club: 'Barcelona', marketValue: 150, transferFee: 150, rating: 89, nationality: 'Spain', age: 22, attributes: { pace: 82, shooting: 78, passing: 90, dribbling: 92, defending: 60, physicality: 70 } },
+  { id: 9, name: 'Virgil van Dijk', position: 'Defender', club: 'Liverpool', marketValue: 80, transferFee: 80, rating: 89, nationality: 'Netherlands', age: 33, attributes: { pace: 75, shooting: 65, passing: 80, dribbling: 60, defending: 92, physicality: 90 } },
+  { id: 10, name: 'Rúben Dias', position: 'Defender', club: 'Manchester City', marketValue: 90, transferFee: 90, rating: 89, nationality: 'Portugal', age: 27, attributes: { pace: 78, shooting: 55, passing: 82, dribbling: 65, defending: 90, physicality: 88 } },
+  { id: 11, name: 'Antonio Rüdiger', position: 'Defender', club: 'Real Madrid', marketValue: 70, transferFee: 70, rating: 87, nationality: 'Germany', age: 31, attributes: { pace: 80, shooting: 50, passing: 75, dribbling: 60, defending: 88, physicality: 90 } },
+  { id: 12, name: 'Achraf Hakimi', position: 'Defender', club: 'PSG', marketValue: 85, transferFee: 85, rating: 88, nationality: 'Morocco', age: 25, attributes: { pace: 95, shooting: 70, passing: 78, dribbling: 82, defending: 78, physicality: 75 } },
+  { id: 13, name: 'Thibaut Courtois', position: 'Goalkeeper', club: 'Real Madrid', marketValue: 60, transferFee: 60, rating: 89, nationality: 'Belgium', age: 32, attributes: { pace: 50, shooting: 40, passing: 65, dribbling: 50, defending: 80, physicality: 75 } },
+  { id: 14, name: 'Alisson Becker', position: 'Goalkeeper', club: 'Liverpool', marketValue: 65, transferFee: 65, rating: 89, nationality: 'Brazil', age: 32, attributes: { pace: 55, shooting: 45, passing: 70, dribbling: 55, defending: 82, physicality: 78 } },
+  { id: 15, name: 'Marc-André ter Stegen', position: 'Goalkeeper', club: 'Barcelona', marketValue: 50, transferFee: 50, rating: 88, nationality: 'Germany', age: 32, attributes: { pace: 50, shooting: 40, passing: 75, dribbling: 55, defending: 80, physicality: 70 } },
+  { id: 16, name: 'Mike Maignan', position: 'Goalkeeper', club: 'AC Milan', marketValue: 55, transferFee: 55, rating: 87, nationality: 'France', age: 29, attributes: { pace: 55, shooting: 40, passing: 65, dribbling: 50, defending: 85, physicality: 80 } },
 ];
 
-const viewCopy: Record<Exclude<ViewKey, 'dashboard' | 'directory'>, { title: string; description: string; icon: typeof UsersRound }> = {
-  profile: {
-    title: 'Player Profile',
-    description: 'The full scouting report, performance history, and valuation insights are planned for a later phase.',
-    icon: UserRound,
-  },
+const viewCopy: Record<Exclude<ViewKey, 'dashboard' | 'directory' | 'profile'>, { title: string; description: string; icon: typeof UsersRound }> = {
   compare: {
     title: 'Compare Players',
     description: 'Side-by-side player evaluation is planned for a later phase.',
@@ -326,7 +340,178 @@ function PlayerDirectory({
   );
 }
 
-function PhaseTwo({ page, selectedPlayer, onBack }: { page: Exclude<ViewKey, 'dashboard' | 'directory'>; selectedPlayer: Player | null; onBack: () => void }) {
+function PlayerProfile({ player, onBack }: { player: Player; onBack: () => void }) {
+  const [notes, setNotes] = useState<ScoutingNote[]>([]);
+  const [draft, setDraft] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState('');
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ text: string; error: boolean } | null>(null);
+  const skills: { label: string; value: number }[] = [
+    { label: 'Pace', value: player.attributes.pace },
+    { label: 'Shooting', value: player.attributes.shooting },
+    { label: 'Passing', value: player.attributes.passing },
+    { label: 'Dribbling', value: player.attributes.dribbling },
+    { label: 'Defending', value: player.attributes.defending },
+    { label: 'Physicality', value: player.attributes.physicality },
+  ];
+  const storageKey = `scoutingNotes_${player.id}`;
+
+  useEffect(() => {
+    setDraft('');
+    setEditingId(null);
+    setDeleteId(null);
+    setFeedback(null);
+    try {
+      const saved = window.localStorage.getItem(`scoutingNotes_${player.id}`);
+      const parsed: unknown = saved ? JSON.parse(saved) : [];
+      setNotes(Array.isArray(parsed) ? parsed.filter((note): note is ScoutingNote =>
+        note && typeof note.id === 'string' && typeof note.content === 'string' && typeof note.timestamp === 'string' && !Number.isNaN(Date.parse(note.timestamp)) && note.playerId === player.id
+      ) : []);
+    } catch {
+      setNotes([]);
+      setFeedback({ text: 'Saved notes could not be read from this browser.', error: true });
+    }
+  }, [player.id]);
+
+  function persist(next: ScoutingNote[]) {
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(next));
+      setNotes(next);
+      setFeedback({ text: 'Scouting notes saved on this device.', error: false });
+      return true;
+    } catch {
+      setFeedback({ text: 'Could not save notes. Check browser storage settings and try again.', error: true });
+      return false;
+    }
+  }
+
+  function addNote(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const content = draft.trim();
+    if (!content) {
+      setFeedback({ text: 'Write a note before adding it.', error: true });
+      return;
+    }
+    const next: ScoutingNote[] = [{ id: `${Date.now()}-${player.id}`, playerId: player.id, content, timestamp: new Date().toISOString(), playerName: player.name }, ...notes];
+    if (persist(next)) setDraft('');
+  }
+
+  function saveEdit(note: ScoutingNote) {
+    const content = editDraft.trim();
+    if (!content) {
+      setFeedback({ text: 'A scouting note cannot be empty.', error: true });
+      return;
+    }
+    const next = notes.map((item) => item.id === note.id ? { ...item, content, timestamp: new Date().toISOString() } : item);
+    if (persist(next)) {
+      setEditingId(null);
+      setEditDraft('');
+    }
+  }
+
+  function deleteNote(id: string) {
+    if (persist(notes.filter((note) => note.id !== id))) setDeleteId(null);
+  }
+
+  return (
+    <section className="profile-page" aria-label={`${player.name} player profile`}>
+      <div className="profile-back-row">
+        <button type="button" className="phase-back" onClick={onBack} data-testid="button-back-directory"><ArrowLeft size={14} /> Back to directory</button>
+        <div className="eyebrow">Scouting / player dossier</div>
+      </div>
+
+      <section className="profile-hero">
+        <div className="profile-photo" aria-label={`Illustrated photo placeholder for ${player.name}`} role="img">
+          <div className="photo-orbit orbit-one" /><div className="photo-orbit orbit-two" />
+          <div className="photo-grid" />
+          <div className="profile-monogram">{monogram(player.name)}</div>
+          <span className="photo-caption">PLAYER DOSSIER / {String(player.id).padStart(2, '0')}</span>
+        </div>
+        <div className="profile-identity">
+          <div className="profile-kicker"><span className={`position-badge position-${player.position.toLowerCase()}`}>{player.position}</span><span>TACTICHUB SCOUT REPORT</span></div>
+          <h1>{player.name}</h1>
+          <p className="profile-club"><Shield size={15} /> {player.club}</p>
+          <div className="profile-fact-line">
+            <div><span>NATIONALITY</span><strong>{player.nationality}</strong></div>
+            <div><span>AGE</span><strong>{player.age} years</strong></div>
+            <div><span>MARKET VALUE</span><strong>{euro(player.marketValue)}</strong></div>
+          </div>
+        </div>
+        <div className="profile-rating"><strong>{player.rating}</strong><span>OVERALL</span><i>OVR</i></div>
+      </section>
+
+      <div className="profile-content-grid">
+        <section className="profile-panel skills-panel" aria-labelledby="skills-heading">
+          <div className="profile-panel-heading"><div><div className="eyebrow">Attribute breakdown</div><h2 id="skills-heading">Skill profile</h2></div><span className="skill-count">06 / 06</span></div>
+          <div className="skills-list">
+            {skills.map((skill, index) => (
+              <div className="skill-row" key={skill.label}>
+                <div className="skill-label"><span>{skill.label}</span><strong>{skill.value}</strong></div>
+                <div className="skill-track" role="progressbar" aria-label={`${skill.label} rating`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={skill.value}>
+                  <div className={`skill-fill skill-fill-${index}`} style={{ width: `${skill.value}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="skills-footnote"><span>ATTRIBUTE SCALE</span><span>0 — 100</span></div>
+        </section>
+
+        <section className="profile-panel highlights-panel" aria-labelledby="highlights-heading">
+          <div className="profile-panel-heading"><div><div className="eyebrow">On-pitch archive</div><h2 id="highlights-heading">Match Highlights</h2></div><span className="no-clips">NO CLIPS</span></div>
+          <div className="video-placeholder">
+            <div className="video-graphic"><div className="video-pitch"><span /><span /><span /></div><div className="video-empty-icon"><CirclePlay size={35} strokeWidth={1.2} /></div></div>
+            <div className="video-copy"><strong>Highlights will appear here</strong><span>No match footage is available in this phase.</span></div>
+            <div className="video-timeline"><span /></div>
+          </div>
+          <div className="video-controls" aria-label="Video controls">
+            <button type="button" disabled aria-label="Previous clip"><SkipBack size={16} /></button>
+            <button type="button" disabled aria-label="Play clip"><Play size={17} fill="currentColor" /></button>
+            <button type="button" disabled aria-label="Pause clip"><Pause size={16} /></button>
+            <button type="button" disabled aria-label="Next clip"><SkipForward size={16} /></button>
+            <span>CLIP LIBRARY EMPTY</span>
+          </div>
+        </section>
+      </div>
+
+      <section className="profile-panel notes-panel" aria-labelledby="notes-heading">
+        <div className="profile-panel-heading notes-heading">
+          <div><div className="eyebrow">Private to this browser</div><h2 id="notes-heading">Scouting Notes <span className="notes-total">{notes.length}</span></h2><p>Keep your observations attached to {player.name}.</p></div>
+          <div className="notes-storage"><span className="storage-indicator" /> LOCAL NOTES</div>
+        </div>
+        <form className="note-form" onSubmit={addNote}>
+          <label htmlFor="scouting-note-input">New observation</label>
+          <div className="note-compose"><textarea id="scouting-note-input" value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Record a detail from your scouting..." rows={3} data-testid="input-scouting-note" /><div className="note-compose-actions"><button type="button" className="note-clear-button" onClick={() => { setDraft(''); setFeedback(null); }} disabled={!draft} data-testid="button-clear-note-input">Clear</button><button type="submit" className="primary-action" data-testid="button-add-note"><Plus size={15} /> Add note</button></div></div>
+        </form>
+        {feedback && <div className={`note-feedback${feedback.error ? ' is-error' : ''}`} role={feedback.error ? 'alert' : 'status'}>{feedback.error ? <CircleDot size={14} /> : <CircleCheck size={14} />}{feedback.text}</div>}
+        {notes.length ? (
+          <div className="notes-list">
+            {notes.map((note) => (
+              <article className="note-card" key={note.id} data-testid={`note-card-${note.id}`}>
+                <div className="note-marker" aria-hidden="true" />
+                <div className="note-card-main">
+                  <div className="note-meta"><Clock3 size={13} /><time dateTime={note.timestamp}>{new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(note.timestamp))}</time>{editingId === note.id && <span className="editing-label">EDITING</span>}</div>
+                  {editingId === note.id ? <textarea className="note-edit-input" value={editDraft} onChange={(event) => setEditDraft(event.target.value)} aria-label="Edit scouting note" autoFocus /> : <p>{note.content}</p>}
+                  {deleteId === note.id && <div className="delete-confirmation" role="group" aria-label="Confirm note deletion"><span>Delete this scouting note?</span><button type="button" onClick={() => deleteNote(note.id)} data-testid={`button-confirm-delete-note-${note.id}`}>Delete note</button><button type="button" onClick={() => setDeleteId(null)}>Keep note</button></div>}
+                </div>
+                <div className="note-actions">
+                  {editingId === note.id ? <><button type="button" className="note-action save-note" onClick={() => saveEdit(note)} data-testid={`button-save-note-${note.id}`}>Save</button><button type="button" className="note-action" onClick={() => { setEditingId(null); setEditDraft(''); }}>Cancel</button></> : <>
+                    <button type="button" className="note-action" onClick={() => { setEditingId(note.id); setEditDraft(note.content); setDeleteId(null); }} aria-label={`Edit note from ${new Date(note.timestamp).toLocaleDateString()}`} data-testid={`button-edit-note-${note.id}`}><Edit3 size={14} /><span>Edit</span></button>
+                    <button type="button" className="note-action delete-note" onClick={() => { setDeleteId(note.id === deleteId ? null : note.id); setEditingId(null); }} aria-expanded={deleteId === note.id} data-testid={`button-delete-note-${note.id}`}><Trash2 size={14} /><span>Delete</span></button>
+                  </>}
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="notes-empty"><div className="notes-empty-mark"><ClipboardList size={18} /></div><div><strong>No scouting notes yet</strong><p>Your first observation will be saved to this player’s dossier.</p></div></div>
+        )}
+      </section>
+    </section>
+  );
+}
+
+function PhaseTwo({ page, onBack }: { page: Exclude<ViewKey, 'dashboard' | 'directory' | 'profile'>; onBack: () => void }) {
   const copy = viewCopy[page];
   const Icon = copy.icon;
   return (
@@ -335,12 +520,11 @@ function PhaseTwo({ page, selectedPlayer, onBack }: { page: Exclude<ViewKey, 'da
         <div className="phase-icon"><Icon size={25} /></div>
         <div className="eyebrow">TACTICHUB / roadmap</div>
         <h1>{copy.title}</h1>
-        {page === 'profile' && selectedPlayer && <div className="selected-player-chip"><span>{selectedPlayer.position}</span><strong>{selectedPlayer.name}</strong><span>{selectedPlayer.club}</span></div>}
         <p>{copy.description}</p>
-        <div className="phase-stamp"><Sparkles size={12} /> NOT YET BUILT</div>
+        <div className="phase-stamp"><Sparkles size={12} /> UPCOMING</div>
         <div>
           <button className="phase-back" type="button" onClick={onBack} data-testid="button-back-dashboard">
-            <ArrowLeft size={14} /> {page === 'profile' ? 'Back to directory' : 'Back to dashboard'}
+            <ArrowLeft size={14} /> Back to dashboard
           </button>
         </div>
       </div>
@@ -443,12 +627,12 @@ function App() {
                 key={item.key}
                 className="nav-item"
                 aria-current={activeView === item.key ? 'page' : undefined}
-                onClick={() => setActiveView(item.key)}
+                onClick={() => setActiveView(item.key === 'profile' && !selectedPlayer ? 'directory' : item.key)}
                 data-testid={`nav-${item.key}`}
               >
                 <Icon size={16} strokeWidth={1.8} />
                 <span>{item.label}</span>
-                {item.phaseTwo && <small className="phase-tag">UPCOMING</small>}
+                {item.upcoming && <small className="phase-tag">UPCOMING</small>}
               </button>
             );
           })}
@@ -463,7 +647,7 @@ function App() {
         <header className="topbar">
           <div className="breadcrumb"><BreadcrumbIcon size={14} /><strong>{activeLabel}</strong></div>
           <div className="topbar-right">
-            <div className="live-pill"><span className="online-dot" /> PHASE TWO</div>
+            <div className="live-pill"><span className="online-dot" /> PHASE THREE</div>
             <div className="user-chip"><span className="user-avatar">TM</span><span>Team Manager</span></div>
           </div>
         </header>
@@ -477,8 +661,12 @@ function App() {
           />
         ) : activeView === 'directory' ? (
           <PlayerDirectory state={state} onToggleWatchlist={toggleWatchlist} onOpenProfile={(player) => { setSelectedPlayer(player); setActiveView('profile'); }} onAddToSquad={addToSquad} />
+        ) : activeView === 'profile' ? (
+          selectedPlayer
+            ? <PlayerProfile key={selectedPlayer.id} player={selectedPlayer} onBack={() => setActiveView('directory')} />
+            : <PlayerDirectory state={state} onToggleWatchlist={toggleWatchlist} onOpenProfile={(player) => { setSelectedPlayer(player); setActiveView('profile'); }} onAddToSquad={addToSquad} />
         ) : (
-          <PhaseTwo page={activeView} selectedPlayer={selectedPlayer} onBack={() => setActiveView(activeView === 'profile' && selectedPlayer ? 'directory' : 'dashboard')} />
+          <PhaseTwo page={activeView} onBack={() => setActiveView('dashboard')} />
         )}
       </main>
       {toast && <div role="status" className={`toast-note${toastError ? ' toast-error' : ''}`} data-testid="status-toast"><CircleCheck size={14} style={{ verticalAlign: 'middle', marginRight: 7 }} />{toast}</div>}
