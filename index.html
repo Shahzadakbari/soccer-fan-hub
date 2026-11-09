@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TACTICHUB - Ultimate Football Squad & Tactics Hub</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            200: '#a7f3d0',
+                            300: '#6ee7b7',
+                            400: '#34d399',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            800: '#065f46',
+                            900: '#064e3b',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .budget-bar {
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+    <!-- Top Navigation Header -->
+    <header class="bg-slate-800 border-b border-slate-700 px-4 py-3">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <!-- App Title with Football Icon -->
+            <div class="flex items-center space-x-3">
+                <i class="fas fa-futbol text-emerald-500 text-2xl"></i>
+                <h1 class="text-xl font-bold text-white tracking-wider">TACTICHUB</h1>
+            </div>
+            
+            <!-- Navigation Buttons -->
+            <nav class="flex items-center space-x-2">
+                <button onclick="switchView('dashboard')" class="nav-btn bg-emerald-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-emerald-700 transition-colors active-view">
+                    <i class="fas fa-chart-line mr-1"></i> Dashboard
+                </button>
+                <button onclick="switchView('player-directory')" class="nav-btn bg-slate-700 text-slate-200 px-4 py-2 rounded-md text-sm font-medium hover:bg-slate-600 transition-colors">
+                    <i class="fas fa-users mr-1"></i> Player Directory
+                </button>
+                <button onclick="switchView('player-profile')" class="nav-btn bg-slate-700 text-slate-200 px-4 py-2 rounded-md text-sm font-medium hover:bg-slate-600 transition-colors">
+                    <i class="fas fa-user mr-1"></i> Player Profile
+                </button>
+                <button onclick="switchView('compare-players')" class="nav-btn bg-slate-700 text-slate-200 px-4 py-2 rounded-md text-sm font-medium hover:bg-slate-600 transition-colors">
+                    <i class="fas fa-balance-scale mr-1"></i> Compare Players
+                </button>
+                <button onclick="switchView('squad-builder')" class="nav-btn bg-slate-700 text-slate-200 px-4 py-2 rounded-md text-sm font-medium hover:bg-slate-600 transition-colors">
+                    <i class="fas fa-chess-board mr-1"></i> Squad Builder
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="max-w-7xl mx-auto p-6">
+        <!-- Manager Dashboard View -->
+        <section id="dashboard" class="view-section">
+            <!-- Dashboard Header -->
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-white mb-2">Manager Dashboard</h2>
+                <p class="text-slate-400 text-lg">Overview of your squad management and scouting activities</p>
+            </div>
+
+            <!-- Stat Cards Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <!-- Card 1: Remaining Transfer Budget -->
+                <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-money-bill-wave text-emerald-500 text-xl"></i>
+                            <h3 class="text-sm font-medium text-slate-400 uppercase tracking-wider">Remaining Transfer Budget</h3>
+                        </div>
+                        <span class="bg-emerald-500/20 text-emerald-400 text-xs font-bold px-2 py-1 rounded-full">
+                            <i class="fas fa-euro-sign"></i>
+                        </span>
+                    </div>
+                    <div class="text-3xl font-bold text-white" id="stat-budget">€500.0M</div>
+                </div>
+
+                <!-- Card 2: Squad Value -->
+                <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-users text-emerald-500 text-xl"></i>
+                            <h3 class="text-sm font-medium text-slate-400 uppercase tracking-wider">Squad Value</h3>
+                        </div>
+                        <span class="bg-emerald-500/20 text-emerald-400 text-xs font-bold px-2 py-1 rounded-full">
+                            Starting XI
+                        </span>
+                    </div>
+                    <div class="text-3xl font-bold text-white" id="stat-squad-val">€0.0M</div>
+                </div>
+
+                <!-- Card 3: Watchlist Count -->
+                <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-star text-emerald-500 text-xl"></i>
+                            <h3 class="text-sm font-medium text-slate-400 uppercase tracking-wider">Watchlist Count</h3>
+                        </div>
+                        <span class="bg-emerald-500/20 text-emerald-400 text-xs font-bold px-2 py-1 rounded-full">
+                            Starred
+                        </span>
+                    </div>
+                    <div class="text-3xl font-bold text-white" id="stat-watchlist-count">0</div>
+                </div>
+
+                <!-- Card 4: Budget Used Meter -->
+                <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-chart-pie text-emerald-500 text-xl"></i>
+                            <h3 class="text-sm font-medium text-slate-400 uppercase tracking-wider">Budget Used</h3>
+                        </div>
+                        <span class="bg-emerald-500/20 text-emerald-400 text-xs font-bold px-2 py-1 rounded-full">
+                            <span id="stat-budget-percent">0%</span>
+                        </span>
+                    </div>
+                    <div class="w-full bg-slate-700 rounded-full h-3">
+                        <div id="budget-bar" class="budget-bar bg-emerald-500 h-3 rounded-full" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scouting Watchlist Section -->
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-700 mb-8">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-eye text-emerald-500 text-xl"></i>
+                        <h3 class="text-xl font-bold text-white">Scouting Watchlist</h3>
+                    </div>
+                    <span class="text-slate-400 text-sm">Track your starred players</span>
+                </div>
+                <div id="watchlist-container" class="min-h-[100px]">
+                    <p class="text-slate-500 text-center py-8">No players in watchlist yet. Start scouting!</p>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center justify-between">
+                <button onclick="exportSquadCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-6 py-3 rounded-lg transition-colors flex items-center space-x-2">
+                    <i class="fas fa-file-csv"></i>
+                    <span>Export Squad CSV</span>
+                </button>
+                <button onclick="switchView('squad-builder')" class="bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium px-6 py-3 rounded-lg transition-colors flex items-center space-x-2">
+                    <i class="fas fa-chess-board"></i>
+                    <span>Open Lineup Builder</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Placeholder sections for other views -->
+        <section id="player-directory" class="view-section hidden">
+            <div class="text-center py-20">
+                <i class="fas fa-users text-6xl text-slate-600 mb-4"></i>
+                <h2 class="text-2xl font-bold text-white mb-2">Player Directory</h2>
+                <p class="text-slate-400">Coming soon in Phase 2</p>
+            </div>
+        </section>
+
+        <section id="player-profile" class="view-section hidden">
+            <div class="text-center py-20">
+                <i class="fas fa-user text-6xl text-slate-600 mb-4"></i>
+                <h2 class="text-2xl font-bold text-white mb-2">Player Profile</h2>
+                <p class="text-slate-400">Coming soon in Phase 2</p>
+            </div>
+        </section>
+
+        <section id="compare-players" class="view-section hidden">
+            <div class="text-center py-20">
+                <i class="fas fa-balance-scale text-6xl text-slate-600 mb-4"></i>
+                <h2 class="text-2xl font-bold text-white mb-2">Compare Players</h2>
+                <p class="text-slate-400">Coming soon in Phase 2</p>
+            </div>
+        </section>
+
+        <section id="squad-builder" class="view-section hidden">
+            <div class="text-center py-20">
+                <i class="fas fa-chess-board text-6xl text-slate-600 mb-4"></i>
+                <h2 class="text-2xl font-bold text-white mb-2">Squad Builder</h2>
+                <p class="text-slate-400">Coming soon in Phase 2</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- JavaScript -->
+    <script src="js/app.js"></script>
+</body>
+</html>
