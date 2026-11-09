@@ -1,10 +1,11 @@
-# [Project name]
+# TacticHub
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+TacticHub helps football managers browse players, track scouting targets, and manage a transfer budget.
 
 ## Run & Operate
 
 - `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/soccer-fan-hub run dev` — run the Soccer Fan Hub web app
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
@@ -26,11 +27,12 @@ _Populate as you build — short repo map plus pointers to the source-of-truth f
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Phase One and Phase Two use local client state and a bundled player directory; no backend or cross-session persistence is in scope yet.
+- The product roadmap has five phases. Phase Two is the current scope; keep later-phase modules as placeholders until the user provides their requirements.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+The manager dashboard summarizes the transfer budget, squad value, and scouting watchlist. The player directory supports search, position filtering, watchlist toggles, and budget-checked squad additions. Player profiles, comparisons, and lineup building remain future-phase placeholders.
 
 ## User preferences
 

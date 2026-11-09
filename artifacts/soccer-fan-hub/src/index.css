@@ -559,3 +559,75 @@ button:focus-visible, a:focus-visible { outline: 2px solid #55d68b; outline-offs
   .metric-value { font-size: 26px; }
   .phase-card { padding: 42px 22px; }
 }
+
+.directory-page { max-width: 1360px; margin: 0 auto; padding-bottom: 26px; }
+.directory-intro { padding-bottom: 22px; }
+.directory-budget { border-left: 1px solid #34423d; padding: 2px 0 2px 18px; display: flex; flex-direction: column; gap: 6px; }
+.directory-budget span, .player-card-facts span { color: #78878a; font: 500 9px 'IBM Plex Mono', monospace; letter-spacing: .1em; }
+.directory-budget strong { color: #9de9b7; font: 600 19px 'Space Grotesk', sans-serif; }
+.directory-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 17px; padding: 12px; border: 1px solid #27343b; border-radius: 8px; background: #151d24; }
+.search-field { flex: 1; display: flex; align-items: center; gap: 10px; min-width: 160px; height: 40px; padding: 0 12px; border: 1px solid #303c44; border-radius: 5px; color: #7e8f91; background: #11181e; }
+.search-field:focus-within { border-color: #4c8c66; box-shadow: 0 0 0 2px #3d79512e; }
+.search-field input { width: 100%; border: 0; outline: 0; color: #e4ece7; background: transparent; font-size: 12px; }
+.search-field input::placeholder { color: #68777b; }
+.position-field { display: flex; align-items: center; gap: 9px; min-height: 40px; padding: 0 11px; border: 1px solid #303c44; border-radius: 5px; color: #82908e; font-size: 11px; }
+.position-field select { border: 0; outline: 0; background: #151d24; color: #d9e3dd; font: 500 11px 'DM Sans', sans-serif; cursor: pointer; }
+.results-count { color: #7f8c90; font-size: 11px; white-space: nowrap; padding: 0 8px; }
+.results-count strong { color: #b8c8bf; font: 500 12px 'IBM Plex Mono', monospace; }
+.player-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; }
+.directory-card { min-width: 0; position: relative; display: flex; flex-direction: column; padding: 15px; border: 1px solid #29353d; border-radius: 8px; background: linear-gradient(145deg, #19232a, #151c23 68%); transition: border-color .18s, transform .18s, background .18s; }
+.directory-card:hover { border-color: #3a5948; transform: translateY(-2px); background: linear-gradient(145deg, #1b2923, #151c23 72%); }
+.player-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.position-badge { border-radius: 3px; padding: 5px 7px; color: #a5c6af; background: #21332a; font: 500 9px 'IBM Plex Mono', monospace; letter-spacing: .03em; }
+.position-midfielder { color: #b5c8d4; background: #24323b; }
+.position-defender { color: #d2c299; background: #363329; }
+.position-goalkeeper { color: #c7b6d3; background: #30283a; }
+.star-action { display: grid; place-items: center; width: 31px; height: 31px; color: #76858a; border: 1px solid #303c43; border-radius: 5px; background: #192229; cursor: pointer; transition: color .16s, border-color .16s, background .16s; }
+.star-action:hover, .star-action.is-watched { color: #9de9b7; border-color: #41684f; background: #1d3025; }
+.player-card-identity { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.directory-monogram { width: 43px; height: 43px; flex: none; border-radius: 8px; font-size: 11px; background: linear-gradient(145deg, #26382e, #202b2c); }
+.player-identity-copy { flex: 1; min-width: 0; }
+.player-identity-copy h2 { overflow: hidden; margin: 0; color: #e5ece7; font: 600 14px/1.25 'Space Grotesk', sans-serif; text-overflow: ellipsis; white-space: nowrap; }
+.player-identity-copy p { margin: 5px 0 0; color: #869397; font-size: 11px; }
+.rating-box { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 43px; height: 48px; flex: none; border: 1px solid #35453d; border-radius: 5px; background: #1b2923; }
+.rating-box strong { color: #b1efc3; font: 600 18px/1 'Space Grotesk', sans-serif; }
+.rating-box span { margin-top: 4px; color: #799284; font: 500 8px 'IBM Plex Mono', monospace; letter-spacing: .08em; }
+.player-card-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; padding: 12px 0; border-top: 1px solid #29343b; border-bottom: 1px solid #29343b; }
+.player-card-facts div { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.player-card-facts strong { overflow: hidden; color: #c8d3cd; font: 500 11px 'IBM Plex Mono', monospace; text-overflow: ellipsis; white-space: nowrap; }
+.player-card-facts div:nth-child(2) strong { font: 500 11px 'DM Sans', sans-serif; }
+.player-card-actions { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.profile-action, .squad-action { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 35px; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: 600; transition: background .16s, color .16s, border-color .16s; }
+.profile-action { flex: 1; color: #bdc9c3; border: 1px solid #344149; background: #1b252c; }
+.profile-action:hover { color: #e7f1eb; border-color: #597161; background: #202d2d; }
+.squad-action { flex: 1.1; color: #102017; border: 1px solid #5dd88f; background: #58d68c; }
+.squad-action:hover:not(:disabled) { background: #78e5a4; }
+.squad-action:disabled { color: #82918a; border-color: #35433b; background: #222c29; cursor: not-allowed; }
+.squad-action.is-added { color: #9de9b7; border-color: #355b43; background: #1c3024; cursor: default; }
+.unaffordable-note { color: #a78c72; font-size: 9px; margin: 8px 0 0 auto; }
+.directory-empty { min-height: 275px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; border: 1px dashed #334149; border-radius: 8px; background: #151d24; }
+.directory-empty h2 { margin: 14px 0 0; color: #dce6e0; font: 600 15px 'Space Grotesk', sans-serif; }
+.directory-empty p { margin: 7px 0 0; color: #849195; font-size: 11px; }
+.directory-empty .phase-back { margin-top: 12px; }
+.selected-player-chip { width: fit-content; display: flex; align-items: center; gap: 9px; margin: 18px auto 0; padding: 8px 11px; border: 1px solid #344d3d; border-radius: 5px; background: #192820; color: #b8c8bf; font-size: 10px; }
+.selected-player-chip span { color: #88c99e; }
+.selected-player-chip strong { color: #e2ece5; font-weight: 600; }
+.toast-error { border-color: #67433d; background: #2d211f; color: #f1c5b9; }
+@media (max-width: 1050px) {
+  .player-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .directory-intro { align-items: start; }
+  .directory-budget { margin-top: 2px; }
+  .directory-toolbar { flex-wrap: wrap; padding: 10px; }
+  .search-field { flex-basis: 100%; }
+  .position-field { flex: 1; justify-content: space-between; }
+  .results-count { margin-left: auto; }
+  .player-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 420px) {
+  .directory-budget { padding-left: 12px; }
+  .directory-budget strong { font-size: 16px; }
+  .player-card-actions { gap: 6px; }
+  .profile-action, .squad-action { font-size: 9px; }
+}

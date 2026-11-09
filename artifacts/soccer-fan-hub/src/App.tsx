@@ -9,22 +9,27 @@ import {
   CircleDot,
   ClipboardList,
   LayoutDashboard,
+  Search,
   Shield,
   SlidersHorizontal,
   Sparkles,
   Star,
   UserRound,
   UsersRound,
+  UserPlus,
   X,
 } from 'lucide-react';
 
 type Player = {
+  id: number;
   name: string;
   position: string;
   club: string;
   marketValue: number;
   transferFee: number;
   rating: number;
+  nationality: string;
+  age: number;
 };
 
 type ManagerState = {
@@ -43,31 +48,45 @@ const managerState: ManagerState = {
 
 const navItems: { key: ViewKey; label: string; icon: typeof LayoutDashboard; phaseTwo?: boolean }[] = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { key: 'directory', label: 'Player Directory', icon: UsersRound, phaseTwo: true },
+  { key: 'directory', label: 'Player Directory', icon: UsersRound },
   { key: 'profile', label: 'Player Profile', icon: UserRound, phaseTwo: true },
   { key: 'compare', label: 'Compare Players', icon: ArrowLeftRight, phaseTwo: true },
   { key: 'builder', label: 'Squad Builder', icon: ClipboardList, phaseTwo: true },
 ];
 
-const viewCopy: Record<Exclude<ViewKey, 'dashboard'>, { title: string; description: string; icon: typeof UsersRound }> = {
-  directory: {
-    title: 'Player Directory',
-    description: 'Browse and filter the player market when scouting tools arrive in the next phase.',
-    icon: UsersRound,
-  },
+const players: Player[] = [
+  { id: 1, name: 'Kylian Mbappé', position: 'Forward', club: 'PSG', marketValue: 180, transferFee: 180, rating: 91, nationality: 'France', age: 25 },
+  { id: 2, name: 'Erling Haaland', position: 'Forward', club: 'Manchester City', marketValue: 175, transferFee: 175, rating: 91, nationality: 'Norway', age: 24 },
+  { id: 3, name: 'Vinícius Júnior', position: 'Forward', club: 'Real Madrid', marketValue: 120, transferFee: 120, rating: 89, nationality: 'Brazil', age: 24 },
+  { id: 4, name: 'Harry Kane', position: 'Forward', club: 'Bayern Munich', marketValue: 100, transferFee: 100, rating: 90, nationality: 'England', age: 31 },
+  { id: 5, name: 'Jude Bellingham', position: 'Midfielder', club: 'Real Madrid', marketValue: 180, transferFee: 180, rating: 90, nationality: 'England', age: 21 },
+  { id: 6, name: 'Kevin De Bruyne', position: 'Midfielder', club: 'Manchester City', marketValue: 100, transferFee: 100, rating: 91, nationality: 'Belgium', age: 33 },
+  { id: 7, name: 'Rodri', position: 'Midfielder', club: 'Manchester City', marketValue: 120, transferFee: 120, rating: 90, nationality: 'Spain', age: 28 },
+  { id: 8, name: 'Pedri', position: 'Midfielder', club: 'Barcelona', marketValue: 150, transferFee: 150, rating: 89, nationality: 'Spain', age: 22 },
+  { id: 9, name: 'Virgil van Dijk', position: 'Defender', club: 'Liverpool', marketValue: 80, transferFee: 80, rating: 89, nationality: 'Netherlands', age: 33 },
+  { id: 10, name: 'Rúben Dias', position: 'Defender', club: 'Manchester City', marketValue: 90, transferFee: 90, rating: 89, nationality: 'Portugal', age: 27 },
+  { id: 11, name: 'Antonio Rüdiger', position: 'Defender', club: 'Real Madrid', marketValue: 70, transferFee: 70, rating: 87, nationality: 'Germany', age: 31 },
+  { id: 12, name: 'Achraf Hakimi', position: 'Defender', club: 'PSG', marketValue: 85, transferFee: 85, rating: 88, nationality: 'Morocco', age: 25 },
+  { id: 13, name: 'Thibaut Courtois', position: 'Goalkeeper', club: 'Real Madrid', marketValue: 60, transferFee: 60, rating: 89, nationality: 'Belgium', age: 32 },
+  { id: 14, name: 'Alisson Becker', position: 'Goalkeeper', club: 'Liverpool', marketValue: 65, transferFee: 65, rating: 89, nationality: 'Brazil', age: 32 },
+  { id: 15, name: 'Marc-André ter Stegen', position: 'Goalkeeper', club: 'Barcelona', marketValue: 50, transferFee: 50, rating: 88, nationality: 'Germany', age: 32 },
+  { id: 16, name: 'Mike Maignan', position: 'Goalkeeper', club: 'AC Milan', marketValue: 55, transferFee: 55, rating: 87, nationality: 'France', age: 29 },
+];
+
+const viewCopy: Record<Exclude<ViewKey, 'dashboard' | 'directory'>, { title: string; description: string; icon: typeof UsersRound }> = {
   profile: {
     title: 'Player Profile',
-    description: 'A focused view of player details, performance, and valuation is planned for Phase Two.',
+    description: 'The full scouting report, performance history, and valuation insights are planned for a later phase.',
     icon: UserRound,
   },
   compare: {
     title: 'Compare Players',
-    description: 'Side-by-side player evaluation is planned for Phase Two.',
+    description: 'Side-by-side player evaluation is planned for a later phase.',
     icon: ArrowLeftRight,
   },
   builder: {
     title: 'Squad Builder',
-    description: 'Lineup selection and formation planning are planned for Phase Two.',
+    description: 'Lineup selection and formation planning are planned for a later phase.',
     icon: ClipboardList,
   },
 };
@@ -220,7 +239,94 @@ function Dashboard({
   );
 }
 
-function PhaseTwo({ page, onBack }: { page: Exclude<ViewKey, 'dashboard'>; onBack: () => void }) {
+function PlayerDirectory({
+  state,
+  onToggleWatchlist,
+  onOpenProfile,
+  onAddToSquad,
+}: {
+  state: ManagerState;
+  onToggleWatchlist: (player: Player) => void;
+  onOpenProfile: (player: Player) => void;
+  onAddToSquad: (player: Player) => void;
+}) {
+  const [query, setQuery] = useState('');
+  const [position, setPosition] = useState('All');
+  const filteredPlayers = players.filter((player) => {
+    const text = `${player.name} ${player.club} ${player.position} ${player.nationality}`.toLocaleLowerCase();
+    return text.includes(query.trim().toLocaleLowerCase()) && (position === 'All' || player.position === position);
+  });
+
+  return (
+    <section className="directory-page" aria-label="Player directory">
+      <div className="page-intro directory-intro">
+        <div>
+          <div className="eyebrow">Scouting / transfer market</div>
+          <h1 className="page-title">Player Directory</h1>
+          <p className="page-subtitle">Sixteen names worth knowing. Find your next move.</p>
+        </div>
+        <div className="directory-budget"><span>AVAILABLE BUDGET</span><strong>{euro(state.budget)}</strong></div>
+      </div>
+      <div className="directory-toolbar">
+        <label className="search-field">
+          <Search size={16} aria-hidden="true" />
+          <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search name, club, position, nationality" aria-label="Search players" data-testid="input-player-search" />
+        </label>
+        <label className="position-field">
+          <span>Position</span>
+          <select value={position} onChange={(event) => setPosition(event.target.value)} aria-label="Filter by position" data-testid="select-position-filter">
+            {['All', 'Forward', 'Midfielder', 'Defender', 'Goalkeeper'].map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+        </label>
+        <div className="results-count" aria-live="polite"><strong>{filteredPlayers.length}</strong> {filteredPlayers.length === 1 ? 'player' : 'players'} found</div>
+      </div>
+      {filteredPlayers.length ? (
+        <div className="player-grid">
+          {filteredPlayers.map((player) => {
+            const watched = state.watchlist.some((item) => item.id === player.id);
+            const recruited = state.squad.some((item) => item.id === player.id);
+            const affordable = state.budget >= player.transferFee;
+            return (
+              <article className="directory-card" key={player.id} data-testid={`card-player-${player.id}`}>
+                <div className="player-card-top">
+                  <span className={`position-badge position-${player.position.toLowerCase()}`}>{player.position}</span>
+                  <button type="button" className={`star-action${watched ? ' is-watched' : ''}`} onClick={() => onToggleWatchlist(player)} aria-label={`${watched ? 'Remove' : 'Add'} ${player.name} ${watched ? 'from' : 'to'} watchlist`} aria-pressed={watched} title={watched ? 'Remove from watchlist' : 'Add to watchlist'} data-testid={`button-watch-${player.id}`}>
+                    <Star size={16} fill={watched ? 'currentColor' : 'none'} />
+                  </button>
+                </div>
+                <div className="player-card-identity">
+                  <div className="player-monogram directory-monogram" aria-hidden="true">{monogram(player.name)}</div>
+                  <div className="player-identity-copy"><h2>{player.name}</h2><p>{player.club}</p></div>
+                  <div className="rating-box"><strong>{player.rating}</strong><span>OVR</span></div>
+                </div>
+                <div className="player-card-facts">
+                  <div><span>MARKET VALUE</span><strong>{euro(player.marketValue)}</strong></div>
+                  <div><span>NATIONALITY</span><strong>{player.nationality}</strong></div>
+                </div>
+                <div className="player-card-actions">
+                  <button type="button" className="profile-action" onClick={() => onOpenProfile(player)} data-testid={`button-profile-${player.id}`}>Scout Profile <ArrowRight size={13} /></button>
+                  <button type="button" className={`squad-action${recruited ? ' is-added' : ''}`} disabled={recruited || !affordable} onClick={() => onAddToSquad(player)} data-testid={`button-add-squad-${player.id}`}>
+                    {recruited ? <><CircleCheck size={14} /> In squad</> : !affordable ? 'Over budget' : <><UserPlus size={14} /> Add to Squad</>}
+                  </button>
+                </div>
+                {!recruited && !affordable && <div className="unaffordable-note">Requires {euro(player.transferFee)}</div>}
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="directory-empty" data-testid="empty-player-results">
+          <div className="empty-symbol"><Search size={17} /></div>
+          <h2>No players match those filters</h2>
+          <p>Try another name, club, nationality, or position.</p>
+          <button type="button" className="phase-back" onClick={() => { setQuery(''); setPosition('All'); }}>Clear filters</button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function PhaseTwo({ page, selectedPlayer, onBack }: { page: Exclude<ViewKey, 'dashboard' | 'directory'>; selectedPlayer: Player | null; onBack: () => void }) {
   const copy = viewCopy[page];
   const Icon = copy.icon;
   return (
@@ -229,11 +335,12 @@ function PhaseTwo({ page, onBack }: { page: Exclude<ViewKey, 'dashboard'>; onBac
         <div className="phase-icon"><Icon size={25} /></div>
         <div className="eyebrow">TACTICHUB / roadmap</div>
         <h1>{copy.title}</h1>
+        {page === 'profile' && selectedPlayer && <div className="selected-player-chip"><span>{selectedPlayer.position}</span><strong>{selectedPlayer.name}</strong><span>{selectedPlayer.club}</span></div>}
         <p>{copy.description}</p>
-        <div className="phase-stamp"><Sparkles size={12} /> PHASE TWO</div>
+        <div className="phase-stamp"><Sparkles size={12} /> NOT YET BUILT</div>
         <div>
           <button className="phase-back" type="button" onClick={onBack} data-testid="button-back-dashboard">
-            <ArrowLeft size={14} /> Back to dashboard
+            <ArrowLeft size={14} /> {page === 'profile' ? 'Back to directory' : 'Back to dashboard'}
           </button>
         </div>
       </div>
@@ -244,11 +351,40 @@ function PhaseTwo({ page, onBack }: { page: Exclude<ViewKey, 'dashboard'>; onBac
 function App() {
   const [state, setState] = useState<ManagerState>(managerState);
   const [activeView, setActiveView] = useState<ViewKey>('dashboard');
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [toast, setToast] = useState('');
+  const [toastError, setToastError] = useState(false);
 
-  function notify(message: string) {
+  function notify(message: string, isError = false) {
     setToast(message);
+    setToastError(isError);
     window.setTimeout(() => setToast(''), 2600);
+  }
+
+  function toggleWatchlist(player: Player) {
+    const exists = state.watchlist.some((item) => item.id === player.id);
+    setState((current) => ({
+      ...current,
+      watchlist: exists ? current.watchlist.filter((item) => item.id !== player.id) : [...current.watchlist, player],
+    }));
+    notify(exists ? `${player.name} removed from your watchlist` : `${player.name} added to your watchlist`);
+  }
+
+  function addToSquad(player: Player) {
+    if (state.squad.some((item) => item.id === player.id)) {
+      notify(`${player.name} is already in your squad`, true);
+      return;
+    }
+    if (state.budget < player.transferFee) {
+      notify(`Not enough budget to sign ${player.name}`, true);
+      return;
+    }
+    setState((current) => ({
+      ...current,
+      budget: current.budget - player.transferFee,
+      squad: [...current.squad, player],
+    }));
+    notify(`${player.name} added to your squad for ${euro(player.transferFee)}`);
   }
 
   function removeFromWatchlist(name: string) {
@@ -312,7 +448,7 @@ function App() {
               >
                 <Icon size={16} strokeWidth={1.8} />
                 <span>{item.label}</span>
-                {item.phaseTwo && <small className="phase-tag">PHASE 2</small>}
+                {item.phaseTwo && <small className="phase-tag">UPCOMING</small>}
               </button>
             );
           })}
@@ -327,7 +463,7 @@ function App() {
         <header className="topbar">
           <div className="breadcrumb"><BreadcrumbIcon size={14} /><strong>{activeLabel}</strong></div>
           <div className="topbar-right">
-            <div className="live-pill"><span className="online-dot" /> PHASE ONE</div>
+            <div className="live-pill"><span className="online-dot" /> PHASE TWO</div>
             <div className="user-chip"><span className="user-avatar">TM</span><span>Team Manager</span></div>
           </div>
         </header>
@@ -339,11 +475,13 @@ function App() {
             onExport={exportSquad}
             onOpenBuilder={() => setActiveView('builder')}
           />
+        ) : activeView === 'directory' ? (
+          <PlayerDirectory state={state} onToggleWatchlist={toggleWatchlist} onOpenProfile={(player) => { setSelectedPlayer(player); setActiveView('profile'); }} onAddToSquad={addToSquad} />
         ) : (
-          <PhaseTwo page={activeView} onBack={() => setActiveView('dashboard')} />
+          <PhaseTwo page={activeView} selectedPlayer={selectedPlayer} onBack={() => setActiveView(activeView === 'profile' && selectedPlayer ? 'directory' : 'dashboard')} />
         )}
       </main>
-      {toast && <div role="status" className="toast-note" data-testid="status-toast"><CircleCheck size={14} style={{ verticalAlign: 'middle', marginRight: 7 }} />{toast}</div>}
+      {toast && <div role="status" className={`toast-note${toastError ? ' toast-error' : ''}`} data-testid="status-toast"><CircleCheck size={14} style={{ verticalAlign: 'middle', marginRight: 7 }} />{toast}</div>}
     </div>
   );
 }
