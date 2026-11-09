@@ -166,12 +166,55 @@
             </div>
         </section>
 
-        <!-- Placeholder sections for other views -->
+        <!-- Player Directory View -->
         <section id="player-directory" class="view-section hidden">
-            <div class="text-center py-20">
-                <i class="fas fa-users text-6xl text-slate-600 mb-4"></i>
-                <h2 class="text-2xl font-bold text-white mb-2">Player Directory</h2>
-                <p class="text-slate-400">Coming soon in Phase 2</p>
+            <!-- Player Directory Header -->
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-white mb-2">Player Directory</h2>
+                <p class="text-slate-400 text-lg">Browse and scout the world's best football talent</p>
+            </div>
+
+            <!-- Search & Filter Bar -->
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-700 mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Search Bar -->
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input 
+                            type="text" 
+                            id="player-search" 
+                            placeholder="Search players by name, club, or position..." 
+                            oninput="filterPlayers()"
+                            class="w-full bg-slate-700/50 border border-slate-600 rounded-lg pl-12 pr-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                        >
+                    </div>
+                    
+                    <!-- Position Filter Dropdown -->
+                    <div class="relative">
+                        <select 
+                            id="position-filter" 
+                            onchange="filterPlayers()"
+                            class="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all appearance-none cursor-pointer"
+                        >
+                            <option value="All" selected>All Positions</option>
+                            <option value="Forward">Forward</option>
+                            <option value="Midfielder">Midfielder</option>
+                            <option value="Defender">Defender</option>
+                            <option value="Goalkeeper">Goalkeeper</option>
+                        </select>
+                        <i class="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+                    </div>
+                </div>
+                
+                <!-- Results Count -->
+                <div class="mt-4 text-sm text-slate-400">
+                    <span id="player-count">0</span> players found
+                </div>
+            </div>
+
+            <!-- Player Grid -->
+            <div id="player-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Player cards will be dynamically inserted here by JavaScript -->
             </div>
         </section>
 
