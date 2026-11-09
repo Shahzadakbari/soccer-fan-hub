@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Soccer Fan Hub"
+description = "A football squad-management hub for tracking a club budget, squad value, scouting watchlist, and a roster export, with navigation prepared for player and lineup tools."
+version = "1.0.0"
+id = "artifacts/soccer-fan-hub"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19532
+
+[services.development]
+run = "pnpm --filter @workspace/soccer-fan-hub run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/soccer-fan-hub", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/soccer-fan-hub/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19532"
+BASE_PATH = "/"
