@@ -47,8 +47,8 @@
                 <h1 class="text-xl font-bold text-white tracking-wider">TACTICHUB</h1>
             </div>
             
-            <!-- Navigation Buttons -->
-            <nav class="flex items-center space-x-2">
+            <!-- Navigation Buttons (only show when authenticated) -->
+            <nav id="main-nav" class="flex items-center space-x-2">
                 <button onclick="switchView('dashboard')" class="nav-btn bg-emerald-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-emerald-700 transition-colors active-view">
                     <i class="fas fa-chart-line mr-1"></i> Dashboard
                 </button>
@@ -65,8 +65,156 @@
                     <i class="fas fa-chess-board mr-1"></i> Squad Builder
                 </button>
             </nav>
+            
+            <!-- Profile Badge & Sign Out (only show when authenticated) -->
+            <div id="profile-section" class="flex items-center space-x-4">
+                <div id="profile-badge" class="hidden items-center space-x-2">
+                    <span id="greeting" class="text-slate-300"></span>
+                    <div class="flex items-center space-x-2 bg-slate-700 px-3 py-2 rounded-lg">
+                        <i class="fas fa-user-circle text-emerald-500"></i>
+                        <div class="text-right">
+                            <div id="manager-name" class="text-sm font-medium text-white"></div>
+                            <div id="club-name" class="text-xs text-slate-400"></div>
+                        </div>
+                    </div>
+                </div>
+                <button id="signout-btn" onclick="signOut()" class="hidden bg-slate-700 hover:bg-red-600 text-slate-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Sign Out</span>
+                </button>
+            </div>
         </div>
     </header>
+
+    <!-- Authentication View -->
+    <section id="auth-view" class="view-section hidden min-h-screen flex items-center justify-center p-4">
+        <div class="bg-slate-800 rounded-2xl p-8 border border-slate-700 w-full max-w-md shadow-2xl shadow-emerald-500/10">
+            <!-- TACTICHUB Logo -->
+            <div class="text-center mb-8">
+                <div class="flex items-center justify-center space-x-3 mb-4">
+                    <i class="fas fa-futbol text-emerald-500 text-4xl"></i>
+                    <h1 class="text-3xl font-bold text-white tracking-wider">TACTICHUB</h1>
+                </div>
+                <p class="text-slate-400 text-sm">Ultimate Football Squad & Tactics Hub</p>
+            </div>
+            
+            <!-- Tab Switcher -->
+            <div class="flex mb-6">
+                <button 
+                    id="signin-tab"
+                    onclick="switchAuthTab('signin')"
+                    class="auth-tab active flex-1 py-3 px-4 text-center font-medium text-white bg-emerald-600 rounded-l-lg transition-colors"
+                >
+                    Sign In
+                </button>
+                <button 
+                    id="signup-tab"
+                    onclick="switchAuthTab('signup')"
+                    class="auth-tab flex-1 py-3 px-4 text-center font-medium text-slate-400 bg-slate-700 rounded-r-lg hover:bg-slate-600 transition-colors"
+                >
+                    Create Account
+                </button>
+            </div>
+            
+            <!-- Feedback Message Box -->
+            <div id="auth-feedback" class="mb-6 p-3 rounded-lg text-sm hidden"></div>
+            
+            <!-- Sign In Form -->
+            <form id="signin-form" onsubmit="handleSignIn(event)" class="auth-form">
+                <div class="space-y-4">
+                    <div>
+                        <label for="signin-username" class="block text-sm font-medium text-slate-300 mb-2">Username / Email</label>
+                        <input 
+                            type="text" 
+                            id="signin-username"
+                            required
+                            class="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                            placeholder="Enter your username or email"
+                        >
+                    </div>
+                    <div>
+                        <label for="signin-password" class="block text-sm font-medium text-slate-300 mb-2">Password</label>
+                        <input 
+                            type="password" 
+                            id="signin-password"
+                            required
+                            class="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                            placeholder="Enter your password"
+                        >
+                    </div>
+                    <button 
+                        type="submit"
+                        class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
+                    >
+                        <i class="fas fa-sign-in-alt"></i>
+                        <span>Sign In to Club Office</span>
+                    </button>
+                    <button 
+                        type="button"
+                        onclick="demoLogin()"
+                        class="w-full bg-slate-700/50 hover:bg-slate-600 text-slate-300 font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
+                    >
+                        <i class="fas fa-user-check"></i>
+                        <span>Demo Manager Login</span>
+                    </button>
+                </div>
+            </form>
+            
+            <!-- Sign Up Form -->
+            <form id="signup-form" onsubmit="handleSignUp(event)" class="auth-form hidden">
+                <div class="space-y-4">
+                    <div>
+                        <label for="signup-manager" class="block text-sm font-medium text-slate-300 mb-2">Manager Name</label>
+                        <input 
+                            type="text" 
+                            id="signup-manager"
+                            required
+                            class="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                            placeholder="e.g., Coach Alex"
+                        >
+                    </div>
+                    <div>
+                        <label for="signup-club" class="block text-sm font-medium text-slate-300 mb-2">Club Name</label>
+                        <input 
+                            type="text" 
+                            id="signup-club"
+                            required
+                            class="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                            placeholder="e.g., TacticHub FC"
+                        >
+                    </div>
+                    <div>
+                        <label for="signup-username" class="block text-sm font-medium text-slate-300 mb-2">Username / Email</label>
+                        <input 
+                            type="text" 
+                            id="signup-username"
+                            required
+                            class="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                            placeholder="Enter your username or email"
+                        >
+                    </div>
+                    <div>
+                        <label for="signup-password" class="block text-sm font-medium text-slate-300 mb-2">Password (min 4 characters)</label>
+                        <input 
+                            type="password" 
+                            id="signup-password"
+                            required
+                            minlength="4"
+                            class="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                            placeholder="Enter your password"
+                        >
+                    </div>
+                    <button 
+                        type="submit"
+                        class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
+                    >
+                        <i class="fas fa-user-plus"></i>
+                        <span>Register Club & Start</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
 
     <!-- Main Content Area -->
     <main class="max-w-7xl mx-auto p-6">
@@ -75,7 +223,7 @@
             <!-- Dashboard Header -->
             <div class="mb-8">
                 <h2 class="text-3xl font-bold text-white mb-2">Manager Dashboard</h2>
-                <p class="text-slate-400 text-lg">Overview of your squad management and scouting activities</p>
+                <p id="dashboard-subtitle" class="text-slate-400 text-lg">Overview of your squad management and scouting activities</p>
             </div>
 
             <!-- Stat Cards Grid -->

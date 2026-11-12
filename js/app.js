@@ -1,17 +1,18 @@
 /**
  * TACTICHUB - Ultimate Football Squad & Tactics Hub
- * Phase 1, 2 & 3: Manager Dashboard, Top Navigation Header, Player Directory, Player Profile
+ * Phase 1, 2, 3 & 4: Full Authentication with Saved Manager Profiles
  * Global State and Core Functions
  */
 
 // Global State Object
 let managerState = {
-    budget: 500.0,           // Remaining transfer budget in millions
-    squad: [],              // Array of players in the squad
-    watchlist: []           // Array of starred players for scouting
+    budget: 500.0,
+    squad: [],
+    watchlist: []
 };
 
-// Current player being viewed in profile
+// Current user and authentication state
+let currentUser = null;
 let currentPlayerProfile = null;
 
 // Predefined Player Database
@@ -361,11 +362,355 @@ const positionIcons = {
     'Goalkeeper': 'fa-hands'
 };
 
+// ============================================
+// AUTHENTICATION FUNCTIONS
+// ============================================
+
+/**
+ * Switch between Sign In and Sign Up tabs
+ * @param {string} tab - 'signin' or 'signup'
+ */
+function switchAuthTab(tab) {
+    // Update tab buttons
+    const signinTab = document.getElementById('signin-tab');
+    const signupTab = document.getElementById('signup-tab');
+    
+    if (tab === 'signin') {
+        signinTab.classList.add('active', 'bg-emerald-600', 'text-white');
+        signinTab.classList.remove('bg-slate-700', 'text-slate-400');
+        signupTab.classList.remove('active', 'bg-emerald-600', 'text-white');
+        signupTab.classList.add('bg-slate-700', 'text-slate-400');
+    } else {
+        signupTab.classList.add('active', 'bg-emerald-600', 'text-white');
+        signupTab.classList.remove('bg-slate-700', 'text-slate-400');
+        signinTab.classList.remove('active', 'bg-emerald-600', 'text-white');
+        signinTab.classList.add('bg-slate-700', 'text-slate-400');
+    }
+    
+    // Show/hide forms
+    document.getElementById('signin-form').classList.add('hidden');
+    document.getElementById('signup-form').classList.add('hidden');
+    
+    if (tab === 'signin') {
+        document.getElementById('signin-form').classList.remove('hidden');
+    } else {
+        document.getElementById('signup-form').classList.remove('hidden');
+    }
+    
+    // Clear feedback
+    showAuthFeedback('', 'hidden');
+}
+
+/**
+ * Show authentication feedback message
+ * @param {string} message - The message to display
+ * @param {string} type - 'success', 'error', or 'info'
+ */
+function showAuthFeedback(message, type = 'info') {
+    const feedbackEl = document.getElementById('auth-feedback');
+    
+    if (message === '' || type === 'hidden') {
+        feedbackEl.classList.add('hidden');
+        return;
+    }
+    
+    // Set message and styling based on type
+    feedbackEl.textContent = message;
+    feedbackEl.classList.remove('hidden', 'bg-red-500/20', 'text-red-400', 'bg-emerald-500/20', 'text-emerald-400', 'bg-blue-500/20', 'text-blue-400');
+    
+    if (type === 'success') {
+        feedbackEl.classList.add('bg-emerald-500/20', 'text-emerald-400');
+    } else if (type === 'error') {
+        feedbackEl.classList.add('bg-red-500/20', 'text-red-400');
+    } else {
+        feedbackEl.classList.add('bg-blue-500/20', 'text-blue-400');
+    }
+}
+
+/**
+ * Handle Sign In form submission
+ * @param {Event} event - The form submit event
+ */
+function handleSignIn(event) {
+    event.preventDefault();
+    
+    const username = document.getElementById('signin-username').value.trim();
+    const password = document.getElementById('signin-password').value;
+    
+    if (!username || !password) {
+        showAuthFeedback('Please enter both username and password', 'error');
+        return;
+    }
+    
+    // Get users from localStorage
+    const users = getUsersFromStorage();
+    const user = users.find(u => u.username === username && u.password === password);
+    
+    if (user) {
+        // Successful login
+        signInUser(user);
+        showAuthFeedback('Signing in...', 'success');
+        
+        // Switch to dashboard after a brief delay
+        setTimeout(() => {
+            switchView('dashboard');
+            showAuthFeedback('', 'hidden');
+        }, 500);
+    } else {
+        showAuthFeedback('Invalid username or password', 'error');
+    }
+}
+
+/**
+ * Handle Sign Up form submission
+ * @param {Event} event - The form submit event
+ */
+function handleSignUp(event) {
+    event.preventDefault();
+    
+    const managerName = document.getElementById('signup-manager').value.trim();
+    const clubName = document.getElementById('signup-club').value.trim();
+    const username = document.getElementById('signup-username').value.trim();
+    const password = document.getElementById('signup-password').value;
+    
+    // Validation
+    if (!managerName || !clubName || !username || !password) {
+        showAuthFeedback('All fields are required', 'error');
+        return;
+    }
+    
+    if (password.length < 4) {
+        showAuthFeedback('Password must be at least 4 characters', 'error');
+        return;
+    }
+    
+    // Check if username already exists
+    const users = getUsersFromStorage();
+    const existingUser = users.find(u => u.username === username);
+    
+    if (existingUser) {
+        showAuthFeedback('Username already taken', 'error');
+        return;
+    }
+    
+    // Create new user
+    const newUser = {
+        username: username,
+        password: password,
+        managerName: managerName,
+        clubName: clubName,
+        savedState: {
+            budget: 500.0,
+            squad: [],
+            watchlist: []
+        }
+    };
+    
+    // Add to users array and save
+    users.push(newUser);
+    saveUsersToStorage(users);
+    
+    // Auto sign in the new user
+    signInUser(newUser);
+    
+    showAuthFeedback('Account created! Signing in...', 'success');
+    
+    // Switch to dashboard after a brief delay
+    setTimeout(() => {
+        switchView('dashboard');
+        showAuthFeedback('', 'hidden');
+    }, 500);
+}
+
+/**
+ * Demo login - logs into a pre-made guest profile
+ */
+function demoLogin() {
+    const demoUser = {
+        username: 'demo',
+        password: 'demo123',
+        managerName: 'Demo Manager',
+        clubName: 'Demo FC',
+        savedState: {
+            budget: 500.0,
+            squad: [],
+            watchlist: []
+        }
+    };
+    
+    // Check if demo user exists, if not create it
+    const users = getUsersFromStorage();
+    const existingDemo = users.find(u => u.username === 'demo');
+    
+    if (!existingDemo) {
+        users.push(demoUser);
+        saveUsersToStorage(users);
+    }
+    
+    signInUser(demoUser);
+    showAuthFeedback('Logging in as Demo Manager...', 'success');
+    
+    setTimeout(() => {
+        switchView('dashboard');
+        showAuthFeedback('', 'hidden');
+    }, 500);
+}
+
+/**
+ * Sign in a user and load their saved state
+ * @param {Object} user - The user object
+ */
+function signInUser(user) {
+    // Save current user to localStorage
+    localStorage.setItem('tactichub_currentUser', JSON.stringify({
+        username: user.username,
+        managerName: user.managerName,
+        clubName: user.clubName
+    }));
+    
+    // Load user's saved state
+    currentUser = {
+        username: user.username,
+        managerName: user.managerName,
+        clubName: user.clubName
+    };
+    
+    managerState = {
+        budget: user.savedState.budget,
+        squad: user.savedState.squad,
+        watchlist: user.savedState.watchlist
+    };
+    
+    // Update UI
+    updateAuthUI();
+    updateDashboardStats();
+}
+
+/**
+ * Sign out the current user
+ */
+function signOut() {
+    // Save current progress before signing out
+    saveUserProgress();
+    
+    // Clear current user
+    localStorage.removeItem('tactichub_currentUser');
+    currentUser = null;
+    
+    // Reset manager state
+    managerState = {
+        budget: 500.0,
+        squad: [],
+        watchlist: []
+    };
+    
+    // Reset current player profile
+    currentPlayerProfile = null;
+    
+    // Update UI
+    updateAuthUI();
+    
+    // Switch to auth view
+    switchView('auth-view');
+    
+    // Reset forms
+    document.getElementById('signin-form').reset();
+    document.getElementById('signup-form').reset();
+    switchAuthTab('signin');
+}
+
+/**
+ * Update UI based on authentication state
+ */
+function updateAuthUI() {
+    const mainNav = document.getElementById('main-nav');
+    const profileSection = document.getElementById('profile-section');
+    const profileBadge = document.getElementById('profile-badge');
+    const signoutBtn = document.getElementById('signout-btn');
+    
+    if (currentUser) {
+        // Show navigation and profile
+        mainNav.classList.remove('hidden');
+        profileSection.classList.remove('hidden');
+        profileBadge.classList.remove('hidden');
+        signoutBtn.classList.remove('hidden');
+        
+        // Update profile info
+        document.getElementById('manager-name').textContent = currentUser.managerName;
+        document.getElementById('club-name').textContent = currentUser.clubName;
+        
+        // Update greeting based on time of day
+        const hour = new Date().getHours();
+        let greeting = 'Good evening';
+        if (hour < 12) greeting = 'Good morning';
+        else if (hour < 18) greeting = 'Good afternoon';
+        
+        document.getElementById('greeting').textContent = `${greeting}, ${currentUser.managerName}.`;
+        document.getElementById('dashboard-subtitle').textContent = `Welcome back to ${currentUser.clubName}!`;
+    } else {
+        // Hide navigation and profile
+        mainNav.classList.add('hidden');
+        profileSection.classList.add('hidden');
+        profileBadge.classList.add('hidden');
+        signoutBtn.classList.add('hidden');
+        
+        // Reset greeting
+        document.getElementById('greeting').textContent = '';
+        document.getElementById('dashboard-subtitle').textContent = 'Overview of your squad management and scouting activities';
+    }
+}
+
+/**
+ * Get users from localStorage
+ * @returns {Array} Array of user objects
+ */
+function getUsersFromStorage() {
+    const users = localStorage.getItem('tactichub_users');
+    return users ? JSON.parse(users) : [];
+}
+
+/**
+ * Save users to localStorage
+ * @param {Array} users - Array of user objects
+ */
+function saveUsersToStorage(users) {
+    localStorage.setItem('tactichub_users', JSON.stringify(users));
+}
+
+/**
+ * Save current user's progress to localStorage
+ */
+function saveUserProgress() {
+    if (!currentUser) return;
+    
+    const users = getUsersFromStorage();
+    const userIndex = users.findIndex(u => u.username === currentUser.username);
+    
+    if (userIndex >= 0) {
+        users[userIndex].savedState = {
+            budget: managerState.budget,
+            squad: managerState.squad,
+            watchlist: managerState.watchlist
+        };
+        saveUsersToStorage(users);
+    }
+}
+
+// ============================================
+// VIEW SWITCHING FUNCTIONS
+// ============================================
+
 /**
  * Switch between different views in the application
  * @param {string} viewName - The view to display
  */
 function switchView(viewName) {
+    // Check if user is authenticated (except for auth-view)
+    if (viewName !== 'auth-view' && !currentUser) {
+        switchView('auth-view');
+        return;
+    }
+    
     // Hide all view sections
     const viewSections = document.querySelectorAll('.view-section');
     viewSections.forEach(section => {
@@ -410,243 +755,9 @@ function switchView(viewName) {
     }
 }
 
-/**
- * Display a player's profile
- * @param {number} playerId - The ID of the player to display
- */
-function displayPlayerProfile(playerId) {
-    const player = playerDatabase.find(p => p.id === playerId);
-    if (!player) return;
-    
-    currentPlayerProfile = player;
-    
-    // Update profile header
-    document.getElementById('profile-name').textContent = player.name;
-    document.getElementById('profile-club').textContent = player.club;
-    document.getElementById('profile-value').textContent = `€${player.marketValue.toFixed(1)}M`;
-    document.getElementById('profile-rating').textContent = player.rating;
-    document.getElementById('profile-nationality').textContent = player.nationality;
-    document.getElementById('profile-age').textContent = player.age;
-    
-    // Update position badge
-    const positionBadge = document.getElementById('profile-position-badge');
-    positionBadge.innerHTML = `
-        <span class="${positionColors[player.position]} text-xs font-bold px-3 py-1 rounded-full uppercase">
-            <i class="fas ${positionIcons[player.position]} mr-1"></i> ${player.position}
-        </span>
-    `;
-    
-    // Update skill attributes
-    if (player.attributes) {
-        updateAttributeBar('pace', player.attributes.pace);
-        updateAttributeBar('shooting', player.attributes.shooting);
-        updateAttributeBar('passing', player.attributes.passing);
-        updateAttributeBar('dribbling', player.attributes.dribbling);
-        updateAttributeBar('defending', player.attributes.defending);
-        updateAttributeBar('physicality', player.attributes.physicality);
-    }
-    
-    // Load and display scouting notes for this player
-    loadScoutingNotes(playerId);
-    
-    // Clear the note input
-    document.getElementById('scouting-note-input').value = '';
-}
-
-/**
- * Update a single attribute bar display
- * @param {string} attrName - The attribute name (pace, shooting, etc.)
- * @param {number} value - The attribute value (0-100)
- */
-function updateAttributeBar(attrName, value) {
-    const valueEl = document.getElementById(`attr-${attrName}-value`);
-    const barEl = document.getElementById(`attr-${attrName}-bar`);
-    
-    if (valueEl && barEl) {
-        valueEl.textContent = value;
-        barEl.style.width = `${value}%`;
-    }
-}
-
-/**
- * Save a scouting note to localStorage
- */
-function saveScoutingNote() {
-    if (!currentPlayerProfile) {
-        alert('No player selected! Please select a player first.');
-        return;
-    }
-    
-    const noteInput = document.getElementById('scouting-note-input');
-    const noteText = noteInput.value.trim();
-    
-    if (!noteText) {
-        alert('Please enter a note before saving.');
-        return;
-    }
-    
-    // Get existing notes from localStorage
-    const storageKey = `scoutingNotes_${currentPlayerProfile.id}`;
-    let notes = JSON.parse(localStorage.getItem(storageKey)) || [];
-    
-    // Create new note object
-    const newNote = {
-        id: Date.now(),
-        playerId: currentPlayerProfile.id,
-        content: noteText,
-        timestamp: new Date().toISOString(),
-        playerName: currentPlayerProfile.name
-    };
-    
-    // Add to notes array
-    notes.push(newNote);
-    
-    // Save back to localStorage
-    localStorage.setItem(storageKey, JSON.stringify(notes));
-    
-    // Clear input and refresh display
-    noteInput.value = '';
-    loadScoutingNotes(currentPlayerProfile.id);
-    
-    alert('✅ Scouting note saved successfully!');
-}
-
-/**
- * Load scouting notes from localStorage and display them
- * @param {number} playerId - The player ID to load notes for
- */
-function loadScoutingNotes(playerId) {
-    const storageKey = `scoutingNotes_${playerId}`;
-    const notes = JSON.parse(localStorage.getItem(storageKey)) || [];
-    
-    const notesList = document.getElementById('scouting-notes-list');
-    
-    if (notes.length === 0) {
-        notesList.innerHTML = '<p class="text-slate-500 text-center py-6">No scouting notes yet. Add your first note!</p>';
-        return;
-    }
-    
-    let html = '';
-    notes.forEach(note => {
-        const date = new Date(note.timestamp);
-        const formattedDate = date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-        
-        html += `
-            <div class="bg-slate-700/50 rounded-lg p-4 border border-slate-600/50">
-                <div class="flex items-start justify-between mb-2">
-                    <div class="flex-1">
-                        <p class="text-white font-medium mb-1">${note.content}</p>
-                        <p class="text-slate-400 text-xs">
-                            <i class="fas fa-clock mr-1"></i>
-                            ${formattedDate}
-                        </p>
-                    </div>
-                </div>
-                <div class="flex items-center justify-end space-x-2">
-                    <button 
-                        onclick="editScoutingNote(${note.id}, ${note.playerId})"
-                        class="text-slate-400 hover:text-emerald-400 text-xs transition-colors"
-                    >
-                        <i class="fas fa-edit mr-1"></i> Edit
-                    </button>
-                    <button 
-                        onclick="deleteScoutingNote(${note.id}, ${note.playerId})"
-                        class="text-slate-400 hover:text-red-400 text-xs transition-colors"
-                    >
-                        <i class="fas fa-trash mr-1"></i> Delete
-                    </button>
-                </div>
-            </div>
-        `;
-    });
-    
-    notesList.innerHTML = html;
-}
-
-/**
- * Edit a scouting note
- * @param {number} noteId - The note ID to edit
- * @param {number} playerId - The player ID the note belongs to
- */
-function editScoutingNote(noteId, playerId) {
-    const storageKey = `scoutingNotes_${playerId}`;
-    const notes = JSON.parse(localStorage.getItem(storageKey)) || [];
-    
-    const noteToEdit = notes.find(n => n.id === noteId);
-    if (!noteToEdit) return;
-    
-    // Prompt user for new content
-    const newContent = prompt('Edit your scouting note:', noteToEdit.content);
-    if (newContent === null) return; // User cancelled
-    
-    if (newContent.trim() === '') {
-        alert('Note cannot be empty!');
-        return;
-    }
-    
-    // Update the note
-    noteToEdit.content = newContent.trim();
-    noteToEdit.timestamp = new Date().toISOString();
-    
-    // Save back to localStorage
-    localStorage.setItem(storageKey, JSON.stringify(notes));
-    
-    // Refresh display
-    loadScoutingNotes(playerId);
-    
-    alert('✅ Scouting note updated successfully!');
-}
-
-/**
- * Delete a scouting note
- * @param {number} noteId - The note ID to delete
- * @param {number} playerId - The player ID the note belongs to
- */
-function deleteScoutingNote(noteId, playerId) {
-    if (!confirm('Are you sure you want to delete this note?')) {
-        return;
-    }
-    
-    const storageKey = `scoutingNotes_${playerId}`;
-    let notes = JSON.parse(localStorage.getItem(storageKey)) || [];
-    
-    // Filter out the note to delete
-    notes = notes.filter(n => n.id !== noteId);
-    
-    // Save back to localStorage
-    localStorage.setItem(storageKey, JSON.stringify(notes));
-    
-    // Refresh display
-    loadScoutingNotes(playerId);
-    
-    alert('✅ Scouting note deleted successfully!');
-}
-
-/**
- * Clear the note input field
- */
-function clearNoteInput() {
-    document.getElementById('scouting-note-input').value = '';
-}
-
-/**
- * View a player's profile (navigate to player profile view)
- * @param {number} playerId - The ID of the player to view
- */
-function viewPlayerProfile(playerId) {
-    const player = playerDatabase.find(p => p.id === playerId);
-    if (player) {
-        currentPlayerProfile = player;
-        switchView('player-profile');
-        displayPlayerProfile(playerId);
-    }
-}
+// ============================================
+// PLAYER DIRECTORY FUNCTIONS
+// ============================================
 
 /**
  * Render the player directory with current filters
@@ -779,6 +890,9 @@ function toggleWatchlist(playerId) {
         managerState.watchlist.push({ ...player });
     }
     
+    // Save progress
+    saveUserProgress();
+    
     // Update UI
     updateDashboardStats();
     renderPlayerDirectory();
@@ -809,6 +923,9 @@ function addToSquad(playerId) {
     managerState.squad.push({ ...player });
     managerState.budget -= player.transferFee;
     
+    // Save progress
+    saveUserProgress();
+    
     // Update UI
     updateDashboardStats();
     renderPlayerDirectory();
@@ -816,6 +933,262 @@ function addToSquad(playerId) {
     // Show success message
     alert(`✅ ${player.name} added to squad for €${player.transferFee.toFixed(1)}M!`);
 }
+
+/**
+ * View a player's profile (navigate to player profile view)
+ * @param {number} playerId - The ID of the player to view
+ */
+function viewPlayerProfile(playerId) {
+    const player = playerDatabase.find(p => p.id === playerId);
+    if (player) {
+        currentPlayerProfile = player;
+        switchView('player-profile');
+        displayPlayerProfile(playerId);
+    }
+}
+
+// ============================================
+// PLAYER PROFILE FUNCTIONS
+// ============================================
+
+/**
+ * Display a player's profile
+ * @param {number} playerId - The ID of the player to display
+ */
+function displayPlayerProfile(playerId) {
+    const player = playerDatabase.find(p => p.id === playerId);
+    if (!player) return;
+    
+    currentPlayerProfile = player;
+    
+    // Update profile header
+    document.getElementById('profile-name').textContent = player.name;
+    document.getElementById('profile-club').textContent = player.club;
+    document.getElementById('profile-value').textContent = `€${player.marketValue.toFixed(1)}M`;
+    document.getElementById('profile-rating').textContent = player.rating;
+    document.getElementById('profile-nationality').textContent = player.nationality;
+    document.getElementById('profile-age').textContent = player.age;
+    
+    // Update position badge
+    const positionBadge = document.getElementById('profile-position-badge');
+    positionBadge.innerHTML = `
+        <span class="${positionColors[player.position]} text-xs font-bold px-3 py-1 rounded-full uppercase">
+            <i class="fas ${positionIcons[player.position]} mr-1"></i> ${player.position}
+        </span>
+    `;
+    
+    // Update skill attributes
+    if (player.attributes) {
+        updateAttributeBar('pace', player.attributes.pace);
+        updateAttributeBar('shooting', player.attributes.shooting);
+        updateAttributeBar('passing', player.attributes.passing);
+        updateAttributeBar('dribbling', player.attributes.dribbling);
+        updateAttributeBar('defending', player.attributes.defending);
+        updateAttributeBar('physicality', player.attributes.physicality);
+    }
+    
+    // Load and display scouting notes for this player
+    loadScoutingNotes(playerId);
+    
+    // Clear the note input
+    document.getElementById('scouting-note-input').value = '';
+}
+
+/**
+ * Update a single attribute bar display
+ * @param {string} attrName - The attribute name (pace, shooting, etc.)
+ * @param {number} value - The attribute value (0-100)
+ */
+function updateAttributeBar(attrName, value) {
+    const valueEl = document.getElementById(`attr-${attrName}-value`);
+    const barEl = document.getElementById(`attr-${attrName}-bar`);
+    
+    if (valueEl && barEl) {
+        valueEl.textContent = value;
+        barEl.style.width = `${value}%`;
+    }
+}
+
+// ============================================
+// SCOUTING NOTES CRUD FUNCTIONS
+// ============================================
+
+/**
+ * Save a scouting note to localStorage
+ */
+function saveScoutingNote() {
+    if (!currentPlayerProfile) {
+        alert('No player selected! Please select a player first.');
+        return;
+    }
+    
+    const noteInput = document.getElementById('scouting-note-input');
+    const noteText = noteInput.value.trim();
+    
+    if (!noteText) {
+        alert('Please enter a note before saving.');
+        return;
+    }
+    
+    // Get existing notes from localStorage
+    const storageKey = `scoutingNotes_${currentPlayerProfile.id}_${currentUser?.username || 'guest'}`;
+    let notes = JSON.parse(localStorage.getItem(storageKey)) || [];
+    
+    // Create new note object
+    const newNote = {
+        id: Date.now(),
+        playerId: currentPlayerProfile.id,
+        content: noteText,
+        timestamp: new Date().toISOString(),
+        playerName: currentPlayerProfile.name
+    };
+    
+    // Add to notes array
+    notes.push(newNote);
+    
+    // Save back to localStorage
+    localStorage.setItem(storageKey, JSON.stringify(notes));
+    
+    // Clear input and refresh display
+    noteInput.value = '';
+    loadScoutingNotes(currentPlayerProfile.id);
+    
+    alert('✅ Scouting note saved successfully!');
+}
+
+/**
+ * Load scouting notes from localStorage and display them
+ * @param {number} playerId - The player ID to load notes for
+ */
+function loadScoutingNotes(playerId) {
+    if (!currentUser) return;
+    
+    const storageKey = `scoutingNotes_${playerId}_${currentUser.username}`;
+    const notes = JSON.parse(localStorage.getItem(storageKey)) || [];
+    
+    const notesList = document.getElementById('scouting-notes-list');
+    
+    if (notes.length === 0) {
+        notesList.innerHTML = '<p class="text-slate-500 text-center py-6">No scouting notes yet. Add your first note!</p>';
+        return;
+    }
+    
+    let html = '';
+    notes.forEach(note => {
+        const date = new Date(note.timestamp);
+        const formattedDate = date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        html += `
+            <div class="bg-slate-700/50 rounded-lg p-4 border border-slate-600/50">
+                <div class="flex items-start justify-between mb-2">
+                    <div class="flex-1">
+                        <p class="text-white font-medium mb-1">${note.content}</p>
+                        <p class="text-slate-400 text-xs">
+                            <i class="fas fa-clock mr-1"></i>
+                            ${formattedDate}
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center justify-end space-x-2">
+                    <button 
+                        onclick="editScoutingNote(${note.id}, ${note.playerId})"
+                        class="text-slate-400 hover:text-emerald-400 text-xs transition-colors"
+                    >
+                        <i class="fas fa-edit mr-1"></i> Edit
+                    </button>
+                    <button 
+                        onclick="deleteScoutingNote(${note.id}, ${note.playerId})"
+                        class="text-slate-400 hover:text-red-400 text-xs transition-colors"
+                    >
+                        <i class="fas fa-trash mr-1"></i> Delete
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    
+    notesList.innerHTML = html;
+}
+
+/**
+ * Edit a scouting note
+ * @param {number} noteId - The note ID to edit
+ * @param {number} playerId - The player ID the note belongs to
+ */
+function editScoutingNote(noteId, playerId) {
+    if (!currentUser) return;
+    
+    const storageKey = `scoutingNotes_${playerId}_${currentUser.username}`;
+    const notes = JSON.parse(localStorage.getItem(storageKey)) || [];
+    
+    const noteToEdit = notes.find(n => n.id === noteId);
+    if (!noteToEdit) return;
+    
+    // Prompt user for new content
+    const newContent = prompt('Edit your scouting note:', noteToEdit.content);
+    if (newContent === null) return; // User cancelled
+    
+    if (newContent.trim() === '') {
+        alert('Note cannot be empty!');
+        return;
+    }
+    
+    // Update the note
+    noteToEdit.content = newContent.trim();
+    noteToEdit.timestamp = new Date().toISOString();
+    
+    // Save back to localStorage
+    localStorage.setItem(storageKey, JSON.stringify(notes));
+    
+    // Refresh display
+    loadScoutingNotes(playerId);
+    
+    alert('✅ Scouting note updated successfully!');
+}
+
+/**
+ * Delete a scouting note
+ * @param {number} noteId - The note ID to delete
+ * @param {number} playerId - The player ID the note belongs to
+ */
+function deleteScoutingNote(noteId, playerId) {
+    if (!currentUser) return;
+    
+    if (!confirm('Are you sure you want to delete this note?')) {
+        return;
+    }
+    
+    const storageKey = `scoutingNotes_${playerId}_${currentUser.username}`;
+    let notes = JSON.parse(localStorage.getItem(storageKey)) || [];
+    
+    // Filter out the note to delete
+    notes = notes.filter(n => n.id !== noteId);
+    
+    // Save back to localStorage
+    localStorage.setItem(storageKey, JSON.stringify(notes));
+    
+    // Refresh display
+    loadScoutingNotes(playerId);
+    
+    alert('✅ Scouting note deleted successfully!');
+}
+
+/**
+ * Clear the note input field
+ */
+function clearNoteInput() {
+    document.getElementById('scouting-note-input').value = '';
+}
+
+// ============================================
+// DASHBOARD FUNCTIONS
+// ============================================
 
 /**
  * Calculate and update all dashboard statistics
@@ -892,6 +1265,10 @@ function updateWatchlistDisplay() {
  */
 function removeFromWatchlist(index) {
     managerState.watchlist.splice(index, 1);
+    
+    // Save progress
+    saveUserProgress();
+    
     updateDashboardStats();
     renderPlayerDirectory();
 }
@@ -945,15 +1322,47 @@ function exportSquadCSV() {
     window.URL.revokeObjectURL(url);
 }
 
+// ============================================
+// INITIALIZATION
+// ============================================
+
 // Initialize the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    // Set initial active view
-    switchView('dashboard');
+    // Check for current user in localStorage
+    const savedUser = localStorage.getItem('tactichub_currentUser');
+    
+    if (savedUser) {
+        currentUser = JSON.parse(savedUser);
+        
+        // Load user's saved state
+        const users = getUsersFromStorage();
+        const user = users.find(u => u.username === currentUser.username);
+        
+        if (user) {
+            managerState = {
+                budget: user.savedState.budget,
+                squad: user.savedState.squad,
+                watchlist: user.savedState.watchlist
+            };
+        }
+    }
+    
+    // Update UI based on authentication state
+    updateAuthUI();
+    
+    // If user is authenticated, show dashboard; otherwise show auth view
+    if (currentUser) {
+        switchView('dashboard');
+    } else {
+        switchView('auth-view');
+        switchAuthTab('signin');
+    }
     
     // Initialize dashboard stats
     updateDashboardStats();
     
     console.log('TACTICHUB initialized successfully!');
+    console.log('Current User:', currentUser);
     console.log('Global State:', managerState);
     console.log('Player Database:', playerDatabase);
 });
@@ -962,9 +1371,17 @@ document.addEventListener('DOMContentLoaded', function() {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { 
         managerState, 
+        currentUser,
         playerDatabase,
         currentPlayerProfile,
-        switchView, 
+        switchView,
+        switchAuthTab,
+        handleSignIn,
+        handleSignUp,
+        demoLogin,
+        signInUser,
+        signOut,
+        saveUserProgress,
         exportSquadCSV,
         filterPlayers,
         toggleWatchlist,
@@ -975,6 +1392,8 @@ if (typeof module !== 'undefined' && module.exports) {
         loadScoutingNotes,
         editScoutingNote,
         deleteScoutingNote,
-        clearNoteInput
+        clearNoteInput,
+        getUsersFromStorage,
+        saveUsersToStorage
     };
 }
