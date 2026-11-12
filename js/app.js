@@ -1,6 +1,6 @@
 /**
  * TACTICHUB - Ultimate Football Squad & Tactics Hub
- * Phase 1, 2, 3 & 4: Full Authentication with Saved Manager Profiles
+ * Phase 1, 2, 3 & 4: Full Authentication with True Per-Account Persistence
  * Global State and Core Functions
  */
 
@@ -428,6 +428,63 @@ function showAuthFeedback(message, type = 'info') {
 }
 
 /**
+ * Get all accounts from localStorage
+ * @returns {Object} Dictionary of accounts mapped by username
+ */
+function getAccountsFromStorage() {
+    const accounts = localStorage.getItem('tactichub_accounts');
+    return accounts ? JSON.parse(accounts) : {};
+}
+
+/**
+ * Save accounts to localStorage
+ * @param {Object} accounts - Dictionary of accounts
+ */
+function saveAccountsToStorage(accounts) {
+    localStorage.setItem('tactichub_accounts', JSON.stringify(accounts));
+}
+
+/**
+ * Get a specific account by username
+ * @param {string} username - The username to look up
+ * @returns {Object|null} The account object or null if not found
+ */
+function getAccount(username) {
+    const accounts = getAccountsFromStorage();
+    return accounts[username] || null;
+}
+
+/**
+ * Create a new account with fresh state
+ * @param {string} username - The username
+ * @param {string} password - The password
+ * @param {string} managerName - The manager's name
+ * @param {string} clubName - The club name
+ * @returns {Object} The created account
+ */
+function createAccount(username, password, managerName, clubName) {
+    const accounts = getAccountsFromStorage();
+    
+    // Create new account with fresh state
+    const newAccount = {
+        password: password,
+        managerName: managerName,
+        clubName: clubName,
+        data: {
+            budget: 500.0,
+            squad: [],
+            watchlist: []
+        }
+    };
+    
+    // Add to accounts dictionary
+    accounts[username] = newAccount;
+    saveAccountsToStorage(accounts);
+    
+    return newAccount;
+}
+
+/**
  * Handle Sign In form submission
  * @param {Event} event - The form submit event
  */
@@ -442,13 +499,12 @@ function handleSignIn(event) {
         return;
     }
     
-    // Get users from localStorage
-    const users = getUsersFromStorage();
-    const user = users.find(u => u.username === username && u.password === password);
+    // Get account from storage
+    const account = getAccount(username);
     
-    if (user) {
-        // Successful login
-        signInUser(user);
+    if (account && account.password === password) {
+        // Successful login - sign in the user
+        signInUser(username, account);
         showAuthFeedback('Signing in...', 'success');
         
         // Switch to dashboard after a brief delay
@@ -485,33 +541,18 @@ function handleSignUp(event) {
     }
     
     // Check if username already exists
-    const users = getUsersFromStorage();
-    const existingUser = users.find(u => u.username === username);
+    const existingAccount = getAccount(username);
     
-    if (existingUser) {
+    if (existingAccount) {
         showAuthFeedback('Username already taken', 'error');
         return;
     }
     
-    // Create new user
-    const newUser = {
-        username: username,
-        password: password,
-        managerName: managerName,
-        clubName: clubName,
-        savedState: {
-            budget: 500.0,
-            squad: [],
-            watchlist: []
-        }
-    };
-    
-    // Add to users array and save
-    users.push(newUser);
-    saveUsersToStorage(users);
+    // Create new account with fresh state
+    const newAccount = createAccount(username, password, managerName, clubName);
     
     // Auto sign in the new user
-    signInUser(newUser);
+    signInUser(username, newAccount);
     
     showAuthFeedback('Account created! Signing in...', 'success');
     
@@ -526,28 +567,23 @@ function handleSignUp(event) {
  * Demo login - logs into a pre-made guest profile
  */
 function demoLogin() {
-    const demoUser = {
-        username: 'demo',
-        password: 'demo123',
-        managerName: 'Demo Manager',
-        clubName: 'Demo FC',
-        savedState: {
-            budget: 500.0,
-            squad: [],
-            watchlist: []
-        }
-    };
+    const demoUsername = 'demo';
+    const demoPassword = 'demo123';
     
-    // Check if demo user exists, if not create it
-    const users = getUsersFromStorage();
-    const existingDemo = users.find(u => u.username === 'demo');
+    // Check if demo account exists, if not create it
+    let demoAccount = getAccount(demoUsername);
     
-    if (!existingDemo) {
-        users.push(demoUser);
-        saveUsersToStorage(users);
+    if (!demoAccount) {
+        demoAccount = createAccount(
+            demoUsername,
+            demoPassword,
+            'Demo Manager',
+            'Demo FC'
+        );
     }
     
-    signInUser(demoUser);
+    // Sign in the demo user
+    signInUser(demoUsername, demoAccount);
     showAuthFeedback('Logging in as Demo Manager...', 'success');
     
     setTimeout(() => {
@@ -558,27 +594,29 @@ function demoLogin() {
 
 /**
  * Sign in a user and load their saved state
- * @param {Object} user - The user object
+ * @param {string} username - The username
+ * @param {Object} account - The account object
  */
-function signInUser(user) {
+function signInUser(username, account) {
     // Save current user to localStorage
     localStorage.setItem('tactichub_currentUser', JSON.stringify({
-        username: user.username,
-        managerName: user.managerName,
-        clubName: user.clubName
+        username: username,
+        managerName: account.managerName,
+        clubName: account.clubName
     }));
     
-    // Load user's saved state
+    // Set current user
     currentUser = {
-        username: user.username,
-        managerName: user.managerName,
-        clubName: user.clubName
+        username: username,
+        managerName: account.managerName,
+        clubName: account.clubName
     };
     
+    // Load user's saved state
     managerState = {
-        budget: user.savedState.budget,
-        squad: user.savedState.squad,
-        watchlist: user.savedState.watchlist
+        budget: account.data.budget,
+        squad: account.data.squad,
+        watchlist: account.data.watchlist
     };
     
     // Update UI
@@ -620,6 +658,25 @@ function signOut() {
 }
 
 /**
+ * Save current user's progress to localStorage
+ */
+function saveUserProgress() {
+    if (!currentUser) return;
+    
+    const accounts = getAccountsFromStorage();
+    const account = accounts[currentUser.username];
+    
+    if (account) {
+        account.data = {
+            budget: managerState.budget,
+            squad: managerState.squad,
+            watchlist: managerState.watchlist
+        };
+        saveAccountsToStorage(accounts);
+    }
+}
+
+/**
  * Update UI based on authentication state
  */
 function updateAuthUI() {
@@ -657,42 +714,6 @@ function updateAuthUI() {
         // Reset greeting
         document.getElementById('greeting').textContent = '';
         document.getElementById('dashboard-subtitle').textContent = 'Overview of your squad management and scouting activities';
-    }
-}
-
-/**
- * Get users from localStorage
- * @returns {Array} Array of user objects
- */
-function getUsersFromStorage() {
-    const users = localStorage.getItem('tactichub_users');
-    return users ? JSON.parse(users) : [];
-}
-
-/**
- * Save users to localStorage
- * @param {Array} users - Array of user objects
- */
-function saveUsersToStorage(users) {
-    localStorage.setItem('tactichub_users', JSON.stringify(users));
-}
-
-/**
- * Save current user's progress to localStorage
- */
-function saveUserProgress() {
-    if (!currentUser) return;
-    
-    const users = getUsersFromStorage();
-    const userIndex = users.findIndex(u => u.username === currentUser.username);
-    
-    if (userIndex >= 0) {
-        users[userIndex].savedState = {
-            budget: managerState.budget,
-            squad: managerState.squad,
-            watchlist: managerState.watchlist
-        };
-        saveUsersToStorage(users);
     }
 }
 
@@ -1022,6 +1043,11 @@ function saveScoutingNote() {
         return;
     }
     
+    if (!currentUser) {
+        alert('Please sign in to save scouting notes.');
+        return;
+    }
+    
     const noteInput = document.getElementById('scouting-note-input');
     const noteText = noteInput.value.trim();
     
@@ -1031,7 +1057,7 @@ function saveScoutingNote() {
     }
     
     // Get existing notes from localStorage
-    const storageKey = `scoutingNotes_${currentPlayerProfile.id}_${currentUser?.username || 'guest'}`;
+    const storageKey = `scoutingNotes_${currentPlayerProfile.id}_${currentUser.username}`;
     let notes = JSON.parse(localStorage.getItem(storageKey)) || [];
     
     // Create new note object
@@ -1334,15 +1360,21 @@ document.addEventListener('DOMContentLoaded', function() {
     if (savedUser) {
         currentUser = JSON.parse(savedUser);
         
-        // Load user's saved state
-        const users = getUsersFromStorage();
-        const user = users.find(u => u.username === currentUser.username);
+        // Load user's saved state from accounts
+        const account = getAccount(currentUser.username);
         
-        if (user) {
+        if (account) {
             managerState = {
-                budget: user.savedState.budget,
-                squad: user.savedState.squad,
-                watchlist: user.savedState.watchlist
+                budget: account.data.budget,
+                squad: account.data.squad,
+                watchlist: account.data.watchlist
+            };
+        } else {
+            // Account doesn't exist, start fresh
+            managerState = {
+                budget: 500.0,
+                squad: [],
+                watchlist: []
             };
         }
     }
@@ -1364,7 +1396,6 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('TACTICHUB initialized successfully!');
     console.log('Current User:', currentUser);
     console.log('Global State:', managerState);
-    console.log('Player Database:', playerDatabase);
 });
 
 // Export for potential module usage
@@ -1382,6 +1413,10 @@ if (typeof module !== 'undefined' && module.exports) {
         signInUser,
         signOut,
         saveUserProgress,
+        getAccountsFromStorage,
+        saveAccountsToStorage,
+        getAccount,
+        createAccount,
         exportSquadCSV,
         filterPlayers,
         toggleWatchlist,
@@ -1392,8 +1427,6 @@ if (typeof module !== 'undefined' && module.exports) {
         loadScoutingNotes,
         editScoutingNote,
         deleteScoutingNote,
-        clearNoteInput,
-        getUsersFromStorage,
-        saveUsersToStorage
+        clearNoteInput
     };
 }
