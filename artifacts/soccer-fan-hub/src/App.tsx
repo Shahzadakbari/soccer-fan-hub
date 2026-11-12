@@ -12,6 +12,7 @@ import {
   Clock3,
   Edit3,
   LayoutDashboard,
+  LogOut,
   Pause,
   Play,
   Plus,
@@ -28,6 +29,19 @@ import {
   UserPlus,
   X,
 } from 'lucide-react';
+import AuthScreen from './components/auth-screen';
+import {
+  clearManagerSession,
+  createPasswordRecord,
+  readManagerAccounts,
+  readManagerSession,
+  saveManagerProgress,
+  verifyManagerPassword,
+  writeManagerAccounts,
+  writeManagerSession,
+  type LocalManagerAccount,
+  type ManagerIdentity,
+} from './lib/local-auth';
 
 type Player = {
   id: number;
@@ -59,11 +73,13 @@ type ManagerState = {
 
 type ViewKey = 'dashboard' | 'directory' | 'profile' | 'compare' | 'builder';
 
-const managerState: ManagerState = {
+function createInitialManagerState(): ManagerState {
+  return {
   budget: 500.0,
   squad: [],
   watchlist: [],
-};
+  };
+}
 
 const navItems: { key: ViewKey; label: string; icon: typeof LayoutDashboard; upcoming?: boolean }[] = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -92,6 +108,55 @@ const players: Player[] = [
   { id: 16, name: 'Mike Maignan', position: 'Goalkeeper', club: 'AC Milan', marketValue: 55, transferFee: 55, rating: 87, nationality: 'France', age: 29, attributes: { pace: 55, shooting: 40, passing: 65, dribbling: 50, defending: 85, physicality: 80 } },
 ];
 
+function normalizeManagerState(value: unknown): ManagerState {
+  const initial = createInitialManagerState();
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return initial;
+  const saved = value as { budget?: unknown; squad?: unknown; watchlist?: unknown };
+  const byId = new Map(players.map((player) => [player.id, player]));
+  const restorePlayers = (items: unknown) => {
+    if (!Array.isArray(items)) return [];
+    const seen = new Set<number>();
+    return items.flatMap((item) => {
+      if (!item || typeof item !== 'object' || !('id' in item) || typeof item.id !== 'number') return [];
+      const player = byId.get(item.id);
+      if (!player || seen.has(player.id)) return [];
+      seen.add(player.id);
+      return [player];
+    });
+  };
+  return {
+    budget: typeof saved.budget === 'number' && Number.isFinite(saved.budget) && saved.budget >= 0
+      ? saved.budget
+      : initial.budget,
+    squad: restorePlayers(saved.squad),
+    watchlist: restorePlayers(saved.watchlist),
+  };
+}
+
+function restoreWorkspace(): { user: ManagerIdentity | null; state: ManagerState; message: string } {
+  const state = createInitialManagerState();
+  try {
+    const session = readManagerSession();
+    if (!session) return { user: null, state, message: '' };
+    const account = readManagerAccounts().find((item) => item.username.toLowerCase() === session.username.toLowerCase());
+    if (!account) {
+      clearManagerSession();
+      return { user: null, state, message: 'Your saved manager profile was not found. Please sign in again.' };
+    }
+    return {
+      user: { username: account.username, managerName: account.managerName, clubName: account.clubName },
+      state: normalizeManagerState(account.savedState),
+      message: '',
+    };
+  } catch (error) {
+    return {
+      user: null,
+      state,
+      message: error instanceof Error ? error.message : 'Saved account data could not be read.',
+    };
+  }
+}
+
 const viewCopy: Record<Exclude<ViewKey, 'dashboard' | 'directory' | 'profile'>, { title: string; description: string; icon: typeof UsersRound }> = {
   compare: {
     title: 'Compare Players',
@@ -115,11 +180,13 @@ function monogram(name: string) {
 
 function Dashboard({
   state,
+  manager,
   onRemove,
   onExport,
   onOpenBuilder,
 }: {
   state: ManagerState;
+  manager: ManagerIdentity;
   onRemove: (name: string) => void;
   onExport: () => void;
   onOpenBuilder: () => void;
@@ -128,14 +195,16 @@ function Dashboard({
   const committed = state.squad.reduce((sum, player) => sum + player.transferFee, 0);
   const usedPercent = Math.min(100, Math.round((committed / (state.budget + committed)) * 100));
   const formattedDate = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).format(new Date());
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
   return (
     <section className="dashboard" aria-label="Manager dashboard">
       <div className="page-intro">
         <div>
           <div className="eyebrow">Squad operations / overview</div>
-          <h1 className="page-title">Good morning, Manager.</h1>
-          <p className="page-subtitle">Your squad, budget, and next moves — all in one place.</p>
+          <h1 className="page-title">{greeting}, {manager.managerName}.</h1>
+          <p className="page-subtitle">Your {manager.clubName} squad, budget, and next moves — all in one place.</p>
         </div>
         <div className="date-block">{formattedDate.toUpperCase()}</div>
       </div>
@@ -533,16 +602,174 @@ function PhaseTwo({ page, onBack }: { page: Exclude<ViewKey, 'dashboard' | 'dire
 }
 
 function App() {
-  const [state, setState] = useState<ManagerState>(managerState);
+  const [initialWorkspace] = useState(restoreWorkspace);
+  const [state, setState] = useState<ManagerState>(initialWorkspace.state);
+  const [currentUser, setCurrentUser] = useState<ManagerIdentity | null>(initialWorkspace.user);
   const [activeView, setActiveView] = useState<ViewKey>('dashboard');
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [toast, setToast] = useState('');
   const [toastError, setToastError] = useState(false);
+  const [authMessage, setAuthMessage] = useState(initialWorkspace.message);
+  const [authMessageTone, setAuthMessageTone] = useState<'error' | 'success' | 'info'>(initialWorkspace.message ? 'error' : 'info');
+  const [authBusy, setAuthBusy] = useState(false);
 
   function notify(message: string, isError = false) {
     setToast(message);
     setToastError(isError);
     window.setTimeout(() => setToast(''), 2600);
+  }
+
+  useEffect(() => {
+    if (!currentUser) return;
+    try {
+      saveManagerProgress(currentUser.username, state);
+    } catch {
+      notify('Your manager progress could not be saved in this browser.', true);
+    }
+  }, [currentUser?.username, state]);
+
+  function enterWorkspace(account: LocalManagerAccount) {
+    const identity: ManagerIdentity = {
+      username: account.username,
+      managerName: account.managerName,
+      clubName: account.clubName,
+    };
+    writeManagerSession(identity);
+    setState(normalizeManagerState(account.savedState));
+    setCurrentUser(identity);
+    setSelectedPlayer(null);
+    setActiveView('dashboard');
+    setAuthMessage('');
+    notify(`Welcome to ${account.clubName}, ${account.managerName}`);
+  }
+
+  async function signIn(values: { username: string; password: string }) {
+    setAuthBusy(true);
+    setAuthMessage('');
+    try {
+      const username = values.username.trim().toLowerCase();
+      const accounts = readManagerAccounts();
+      const account = accounts.find((item) => item.username.toLowerCase() === username);
+      if (!account || !(await verifyManagerPassword(account, values.password))) {
+        setAuthMessage('We could not find a matching manager profile and password.');
+        setAuthMessageTone('error');
+        return;
+      }
+
+      if (account.password !== undefined && !account.passwordHash) {
+        const passwordRecord = await createPasswordRecord(values.password);
+        account.passwordSalt = passwordRecord.passwordSalt;
+        account.passwordHash = passwordRecord.passwordHash;
+        delete account.password;
+        writeManagerAccounts(accounts);
+      }
+
+      enterWorkspace(account);
+    } catch (error) {
+      setAuthMessage(error instanceof Error ? error.message : 'Sign-in could not be completed.');
+      setAuthMessageTone('error');
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  async function signUp(values: { managerName: string; clubName: string; username: string; password: string }) {
+    setAuthBusy(true);
+    setAuthMessage('');
+    try {
+      const managerName = values.managerName.trim();
+      const clubName = values.clubName.trim();
+      const username = values.username.trim().toLowerCase();
+      const password = values.password;
+      if (!managerName || !clubName || !username || !password) {
+        setAuthMessage('Complete every field to create your manager profile.');
+        setAuthMessageTone('error');
+        return;
+      }
+      if (password.length < 4) {
+        setAuthMessage('Password must be at least 4 characters.');
+        setAuthMessageTone('error');
+        return;
+      }
+      if (username === 'demo') {
+        setAuthMessage('That username is reserved for the demo manager.');
+        setAuthMessageTone('error');
+        return;
+      }
+
+      const accounts = readManagerAccounts();
+      if (accounts.some((item) => item.username.toLowerCase() === username)) {
+        setAuthMessage('That username is already in use on this browser.');
+        setAuthMessageTone('error');
+        return;
+      }
+
+      const passwordRecord = await createPasswordRecord(password);
+      const account: LocalManagerAccount = {
+        username,
+        managerName,
+        clubName,
+        ...passwordRecord,
+        savedState: createInitialManagerState(),
+      };
+      accounts.push(account);
+      writeManagerAccounts(accounts);
+      enterWorkspace(account);
+    } catch (error) {
+      setAuthMessage(error instanceof Error ? error.message : 'Your manager profile could not be created.');
+      setAuthMessageTone('error');
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  function demoLogin() {
+    setAuthBusy(true);
+    setAuthMessage('');
+    try {
+      const accounts = readManagerAccounts();
+      let account = accounts.find((item) => item.username.toLowerCase() === 'demo');
+      if (!account) {
+        account = {
+          username: 'demo',
+          managerName: 'Demo Manager',
+          clubName: 'Demo FC',
+          savedState: createInitialManagerState(),
+          isDemo: true,
+        };
+        accounts.push(account);
+      } else {
+        account.managerName = 'Demo Manager';
+        account.clubName = 'Demo FC';
+        account.isDemo = true;
+        delete account.password;
+        delete account.passwordSalt;
+        delete account.passwordHash;
+      }
+      writeManagerAccounts(accounts);
+      enterWorkspace(account);
+    } catch (error) {
+      setAuthMessage(error instanceof Error ? error.message : 'Demo access could not be opened.');
+      setAuthMessageTone('error');
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  function signOut() {
+    if (!currentUser) return;
+    try {
+      saveManagerProgress(currentUser.username, state);
+      clearManagerSession();
+      setCurrentUser(null);
+      setState(createInitialManagerState());
+      setSelectedPlayer(null);
+      setActiveView('dashboard');
+      setAuthMessage('Signed out of your manager profile.');
+      setAuthMessageTone('success');
+    } catch {
+      notify('Could not save your progress, so you are still signed in.', true);
+    }
   }
 
   function toggleWatchlist(player: Player) {
@@ -607,6 +834,19 @@ function App() {
   const activeIcon = navItems.find((item) => item.key === activeView)?.icon ?? LayoutDashboard;
   const BreadcrumbIcon = activeIcon;
 
+  if (!currentUser) {
+    return (
+      <AuthScreen
+        onSignIn={signIn}
+        onSignUp={signUp}
+        onDemoLogin={demoLogin}
+        message={authMessage}
+        messageTone={authMessageTone}
+        busy={authBusy}
+      />
+    );
+  }
+
   return (
     <div className="hub-shell">
       <aside className="hub-sidebar" aria-label="Main navigation">
@@ -639,7 +879,7 @@ function App() {
         </nav>
         <div className="sidebar-bottom">
           <div className="season-label">CLUB WORKSPACE</div>
-          <div className="season-value"><span className="online-dot" />Local squad data</div>
+          <div className="season-value"><span className="online-dot" />Saved to this browser</div>
         </div>
       </aside>
 
@@ -647,14 +887,16 @@ function App() {
         <header className="topbar">
           <div className="breadcrumb"><BreadcrumbIcon size={14} /><strong>{activeLabel}</strong></div>
           <div className="topbar-right">
-            <div className="live-pill"><span className="online-dot" /> PHASE THREE</div>
-            <div className="user-chip"><span className="user-avatar">TM</span><span>Team Manager</span></div>
+            <div className="live-pill"><span className="online-dot" /> PHASE FOUR</div>
+            <div className="user-chip" data-testid="manager-profile-chip"><span className="user-avatar">{monogram(currentUser.managerName)}</span><span>{currentUser.managerName}<small className="user-club">{currentUser.clubName}</small></span></div>
+            <button type="button" className="signout-button" onClick={signOut} data-testid="button-sign-out"><LogOut size={14} /><span>Sign out</span></button>
           </div>
         </header>
 
         {activeView === 'dashboard' ? (
           <Dashboard
             state={state}
+            manager={currentUser}
             onRemove={removeFromWatchlist}
             onExport={exportSquad}
             onOpenBuilder={() => setActiveView('builder')}

@@ -27,12 +27,12 @@ _Populate as you build — short repo map plus pointers to the source-of-truth f
 
 ## Architecture decisions
 
-- Phases One through Three use local client state and a bundled player directory; scouting notes persist in the browser, but squad and watchlist state do not.
-- The product roadmap has five phases. Phase Three is the current scope; keep later-phase modules as placeholders until the user provides their requirements.
+- Phases One through Four use local browser state and a bundled player directory. Manager profiles, squad, watchlist, and scouting notes are stored in this browser; this prototype's sign-in is not production authentication.
+- The product roadmap has five phases. Phase Four is the current scope; keep the remaining phase modules as placeholders until the user provides their requirements.
 
 ## Product
 
-The manager dashboard summarizes the transfer budget, squad value, and scouting watchlist. The player directory supports search, position filtering, watchlist toggles, and budget-checked squad additions. Player profiles include skill attributes and personal scouting notes; comparisons and lineup building remain future-phase placeholders.
+The manager dashboard summarizes the transfer budget, squad value, and scouting watchlist. The player directory supports search, position filtering, watchlist toggles, and budget-checked squad additions. Manager profiles support local sign-up, sign-in, demo access, and saved squad state. Player profiles include skill attributes and personal scouting notes; comparisons and lineup building remain future-phase placeholders.
 
 ## User preferences
 
