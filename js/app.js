@@ -1248,6 +1248,9 @@ function updateDashboardStats() {
 
     // Update watchlist display
     updateWatchlistDisplay();
+    
+    // Update squad display
+    updateSquadDisplay();
 }
 
 /**
@@ -1286,6 +1289,41 @@ function updateWatchlistDisplay() {
 }
 
 /**
+ * Update the squad container with current squad players
+ */
+function updateSquadDisplay() {
+    const squadContainer = document.getElementById('squad-container');
+    
+    if (managerState.squad.length === 0) {
+        squadContainer.innerHTML = '<p class="text-slate-500 text-center py-8">No players in your squad yet. Start building!</p>';
+        return;
+    }
+
+    let html = '';
+    managerState.squad.forEach((player, index) => {
+        html += `
+            <div class="bg-slate-700/50 rounded-lg p-4 mb-3 border border-slate-600/50">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-emerald-500 text-lg">⚽</span>
+                        <div>
+                            <p class="font-medium text-white">${player.name || 'Unknown Player'}</p>
+                            <p class="text-xs text-slate-400">${player.position || 'N/A'} • ${player.club || 'Free Agent'}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm font-medium text-emerald-400">€${(player.marketValue || 0).toFixed(1)}M</p>
+                        <button onclick="sellPlayerFromSquad(${index})" class="text-slate-400 hover:text-emerald-400 text-xs mt-1">Sell / Remove</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    squadContainer.innerHTML = html;
+}
+
+/**
  * Remove a player from the watchlist
  * @param {number} index - Index of the player in the watchlist array
  */
@@ -1297,6 +1335,35 @@ function removeFromWatchlist(index) {
     
     updateDashboardStats();
     renderPlayerDirectory();
+}
+
+/**
+ * Sell a player from the squad, refunding their market value
+ * @param {number} index - Index of the player in the squad array
+ */
+function sellPlayerFromSquad(index) {
+    const player = managerState.squad[index];
+    if (!player) return;
+    
+    // Confirm with user
+    if (!confirm(`Are you sure you want to sell ${player.name} for €${player.marketValue.toFixed(1)}M?`)) {
+        return;
+    }
+    
+    // Refund the market value to budget
+    managerState.budget += player.marketValue;
+    
+    // Remove player from squad
+    managerState.squad.splice(index, 1);
+    
+    // Save progress
+    saveUserProgress();
+    
+    // Update UI
+    updateDashboardStats();
+    renderPlayerDirectory();
+    
+    alert(`✅ ${player.name} sold for €${player.marketValue.toFixed(1)}M! Budget updated.`);
 }
 
 /**
