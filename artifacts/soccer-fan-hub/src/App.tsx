@@ -182,12 +182,14 @@ function Dashboard({
   state,
   manager,
   onRemove,
+  onSell,
   onExport,
   onOpenBuilder,
 }: {
   state: ManagerState;
   manager: ManagerIdentity;
   onRemove: (name: string) => void;
+  onSell: (player: Player) => void;
   onExport: () => void;
   onOpenBuilder: () => void;
 }) {
@@ -318,6 +320,51 @@ function Dashboard({
           <div className="action-footer"><CircleDot size={12} /><span>Squad planning tools are ready for export</span></div>
         </section>
       </div>
+
+      <section className="panel squad-panel" aria-labelledby="my-squad-heading">
+        <div className="panel-header">
+          <div>
+            <div className="panel-title-wrap">
+              <h2 className="panel-title" id="my-squad-heading">My squad</h2>
+              <span className="panel-count">{state.squad.length}</span>
+            </div>
+            <div className="panel-kicker">Manage your signed players</div>
+          </div>
+          <span className="squad-panel-note">Sale returns market value to your budget</span>
+        </div>
+        {state.squad.length > 0 ? (
+          <div className="squad-roster">
+            {state.squad.map((player) => (
+              <div className="squad-row" key={player.id} data-testid={`row-squad-${player.id}`}>
+                <div className="player-monogram" aria-hidden="true">{monogram(player.name)}</div>
+                <div className="squad-player-details">
+                  <div className="player-name">{player.name}</div>
+                  <div className="player-meta">{player.position} <span aria-hidden="true">·</span> {player.club}</div>
+                </div>
+                <div className="squad-player-value">
+                  <span>MARKET VALUE</span>
+                  <strong>{euro(player.marketValue)}</strong>
+                </div>
+                <button
+                  type="button"
+                  className="sell-player-action"
+                  onClick={() => onSell(player)}
+                  aria-label={`Sell ${player.name} for ${euro(player.marketValue)}`}
+                  data-testid={`button-sell-${player.id}`}
+                >
+                  Sell / Remove
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="empty-state squad-empty-state" data-testid="empty-squad">
+            <div className="empty-symbol"><UsersRound size={17} /></div>
+            <div className="empty-title">Your squad is waiting</div>
+            <div className="empty-copy">Sign players from the transfer market to build your squad.</div>
+          </div>
+        )}
+      </section>
     </section>
   );
 }
@@ -806,6 +853,24 @@ function App() {
     notify(`${name} removed from your watchlist`);
   }
 
+  function sellFromSquad(player: Player) {
+    const currentPlayer = state.squad.find((item) => item.id === player.id);
+    if (!currentPlayer) return;
+    const refund = currentPlayer.marketValue;
+    if (!window.confirm(`Sell ${currentPlayer.name} for ${euro(refund)} and return them to the market?`)) return;
+
+    setState((current) => {
+      const stillOwned = current.squad.some((item) => item.id === currentPlayer.id);
+      if (!stillOwned) return current;
+      return {
+        ...current,
+        budget: current.budget + refund,
+        squad: current.squad.filter((item) => item.id !== currentPlayer.id),
+      };
+    });
+    notify(`${currentPlayer.name} sold for ${euro(refund)}. Budget refunded.`);
+  }
+
   function exportSquad() {
     const headers = ['Name', 'Position', 'Club', 'Market Value (EUR M)', 'Transfer Fee (EUR M)', 'Rating'];
     const rows = state.squad.map((player) => [
@@ -898,6 +963,7 @@ function App() {
             state={state}
             manager={currentUser}
             onRemove={removeFromWatchlist}
+            onSell={sellFromSquad}
             onExport={exportSquad}
             onOpenBuilder={() => setActiveView('builder')}
           />
