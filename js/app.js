@@ -793,6 +793,10 @@ function switchView(viewName) {
         renderPlayerDirectory();
     }
     
+    if (viewName === 'compare-players') {
+        initializeComparisonDropdowns();
+    }
+    
     if (viewName !== 'player-profile') {
         currentPlayerProfile = null;
     }
@@ -1188,6 +1192,287 @@ function deleteScoutingNote(noteId, playerId) {
  */
 function clearNoteInput() {
     document.getElementById('scouting-note-input').value = '';
+}
+
+// ============================================
+// COMPARISON TOOL FUNCTIONS
+// ============================================
+
+/**
+ * Initialize the comparison dropdowns with all players
+ */
+function initializeComparisonDropdowns() {
+    const player1Select = document.getElementById('compare-player-1');
+    const player2Select = document.getElementById('compare-player-2');
+    
+    // Clear existing options (except the first "Select a player..." option)
+    player1Select.innerHTML = '<option value="">Select a player...</option>';
+    player2Select.innerHTML = '<option value="">Select a player...</option>';
+    
+    // Add all players to both dropdowns
+    playerDatabase.forEach(player => {
+        const option1 = document.createElement('option');
+        option1.value = player.id;
+        option1.textContent = `${player.name} (${player.position}, ${player.club})`;
+        player1Select.appendChild(option1);
+        
+        const option2 = document.createElement('option');
+        option2.value = player.id;
+        option2.textContent = `${player.name} (${player.position}, ${player.club})`;
+        player2Select.appendChild(option2);
+    });
+    
+    // Set defaults (first and second player)
+    if (playerDatabase.length >= 1) {
+        player1Select.value = playerDatabase[0].id;
+    }
+    if (playerDatabase.length >= 2) {
+        player2Select.value = playerDatabase[1].id;
+    }
+    
+    // Trigger initial comparison
+    updateComparison();
+}
+
+/**
+ * Update the comparison view based on selected players
+ */
+function updateComparison() {
+    const player1Id = parseInt(document.getElementById('compare-player-1').value);
+    const player2Id = parseInt(document.getElementById('compare-player-2').value);
+    
+    // If both players are selected, show comparison
+    if (player1Id && player2Id) {
+        const player1 = playerDatabase.find(p => p.id === player1Id);
+        const player2 = playerDatabase.find(p => p.id === player2Id);
+        
+        if (player1 && player2) {
+            displayComparison(player1, player2);
+            document.getElementById('comparison-container').classList.remove('hidden');
+            return;
+        }
+    }
+    
+    // Hide comparison if players not selected
+    document.getElementById('comparison-container').classList.add('hidden');
+}
+
+/**
+ * Display the comparison between two players
+ */
+function displayComparison(player1, player2) {
+    // Update Player 1 Card
+    document.getElementById('player-1-name').textContent = player1.name;
+    document.getElementById('player-1-club').textContent = player1.club;
+    document.getElementById('player-1-position').textContent = player1.position;
+    document.getElementById('player-1-position').className = `${positionColors[player1.position]} text-xs font-bold px-3 py-1 rounded-full`;
+    document.getElementById('player-1-rating').textContent = player1.rating;
+    document.getElementById('player-1-value').textContent = `€${player1.marketValue.toFixed(1)}M`;
+    document.getElementById('player-1-avatar').textContent = player1.name.substring(0, 2).toUpperCase();
+    
+    // Update Player 2 Card
+    document.getElementById('player-2-name').textContent = player2.name;
+    document.getElementById('player-2-club').textContent = player2.club;
+    document.getElementById('player-2-position').textContent = player2.position;
+    document.getElementById('player-2-position').className = `${positionColors[player2.position]} text-xs font-bold px-3 py-1 rounded-full`;
+    document.getElementById('player-2-rating').textContent = player2.rating;
+    document.getElementById('player-2-value').textContent = `€${player2.marketValue.toFixed(1)}M`;
+    document.getElementById('player-2-avatar').textContent = player2.name.substring(0, 2).toUpperCase();
+    
+    // Update Add to Squad buttons
+    updateComparisonAddButtons(player1, player2);
+    
+    // Update attribute displays for both players
+    const attributes = ['pace', 'shooting', 'passing', 'dribbling', 'defending', 'physicality'];
+    
+    attributes.forEach(attr => {
+        const val1 = player1.attributes?.[attr] || 0;
+        const val2 = player2.attributes?.[attr] || 0;
+        
+        // Update player 1 attribute
+        document.getElementById(`player-1-${attr}`).textContent = val1;
+        document.getElementById(`player-1-${attr}-bar`).style.width = `${val1}%`;
+        
+        // Update player 2 attribute
+        document.getElementById(`player-2-${attr}`).textContent = val2;
+        document.getElementById(`player-2-${attr}-bar`).style.width = `${val2}%`;
+        
+        // Update comparison row
+        updateComparisonRow(attr, val1, val2, player1, player2);
+    });
+    
+    // Update overall verdict
+    updateComparisonVerdict(player1, player2);
+}
+
+/**
+ * Update the Add to Squad buttons in comparison view
+ */
+function updateComparisonAddButtons(player1, player2) {
+    const addBtn1 = document.getElementById('player-1-add-btn');
+    const addBtn2 = document.getElementById('player-2-add-btn');
+    
+    // Player 1
+    const isPlayer1InSquad = managerState.squad.some(p => p.id === player1.id);
+    const canAffordPlayer1 = player1.transferFee <= managerState.budget;
+    
+    if (isPlayer1InSquad) {
+        addBtn1.innerHTML = '<i class="fas fa-check"></i><span>In Squad</span>';
+        addBtn1.classList.remove('bg-slate-700/50', 'hover:bg-emerald-500/20', 'text-slate-300', 'hover:text-emerald-400');
+        addBtn1.classList.add('bg-emerald-500/20', 'text-emerald-400');
+        addBtn1.onclick = null;
+    } else {
+        addBtn1.innerHTML = '<i class="fas fa-plus"></i><span>Add to Squad</span>';
+        addBtn1.classList.remove('bg-emerald-500/20', 'text-emerald-400');
+        addBtn1.classList.add('bg-slate-700/50', 'hover:bg-emerald-500/20', 'text-slate-300', 'hover:text-emerald-400');
+        addBtn1.onclick = () => addPlayerToSquadFromComparison(1);
+        addBtn1.disabled = !canAffordPlayer1;
+    }
+    
+    // Player 2
+    const isPlayer2InSquad = managerState.squad.some(p => p.id === player2.id);
+    const canAffordPlayer2 = player2.transferFee <= managerState.budget;
+    
+    if (isPlayer2InSquad) {
+        addBtn2.innerHTML = '<i class="fas fa-check"></i><span>In Squad</span>';
+        addBtn2.classList.remove('bg-slate-700/50', 'hover:bg-emerald-500/20', 'text-slate-300', 'hover:text-emerald-400');
+        addBtn2.classList.add('bg-emerald-500/20', 'text-emerald-400');
+        addBtn2.onclick = null;
+    } else {
+        addBtn2.innerHTML = '<i class="fas fa-plus"></i><span>Add to Squad</span>';
+        addBtn2.classList.remove('bg-emerald-500/20', 'text-emerald-400');
+        addBtn2.classList.add('bg-slate-700/50', 'hover:bg-emerald-500/20', 'text-slate-300', 'hover:text-emerald-400');
+        addBtn2.onclick = () => addPlayerToSquadFromComparison(2);
+        addBtn2.disabled = !canAffordPlayer2;
+    }
+}
+
+/**
+ * Add a player to squad from the comparison view
+ */
+function addPlayerToSquadFromComparison(playerNum) {
+    const playerId = playerNum === 1 ? 
+        parseInt(document.getElementById('compare-player-1').value) :
+        parseInt(document.getElementById('compare-player-2').value);
+    
+    if (playerId) {
+        addToSquad(playerId);
+        updateComparisonAddButtons(
+            playerDatabase.find(p => p.id === parseInt(document.getElementById('compare-player-1').value)),
+            playerDatabase.find(p => p.id === parseInt(document.getElementById('compare-player-2').value))
+        );
+    }
+}
+
+/**
+ * Update a single comparison row with winner highlighting
+ */
+function updateComparisonRow(attr, value1, value2, player1, player2) {
+    const winnerElement = document.getElementById(`${attr}-winner`);
+    const bar1Element = document.getElementById(`compare-${attr}-bar-1`);
+    const bar2Element = document.getElementById(`compare-${attr}-bar-2`);
+    const value1Element = document.getElementById(`compare-${attr}-1`);
+    const value2Element = document.getElementById(`compare-${attr}-2`);
+    
+    // Set values
+    value1Element.textContent = value1;
+    value2Element.textContent = value2;
+    
+    // Calculate bar widths (relative to each other)
+    const maxValue = Math.max(value1, value2);
+    const bar1Width = maxValue > 0 ? (value1 / maxValue * 50) : 0;
+    const bar2Width = maxValue > 0 ? (value2 / maxValue * 50) : 0;
+    
+    bar1Element.style.width = `${bar1Width}%`;
+    bar2Element.style.width = `${bar2Width}%`;
+    
+    // Determine winner
+    if (value1 > value2) {
+        winnerElement.textContent = `${player1.name} wins`;
+        winnerElement.classList.remove('hidden');
+        bar1Element.classList.remove('bg-emerald-500');
+        bar1Element.classList.add('bg-emerald-400');
+        bar2Element.classList.remove('bg-blue-500');
+        bar2Element.classList.add('bg-blue-400');
+    } else if (value2 > value1) {
+        winnerElement.textContent = `${player2.name} wins`;
+        winnerElement.classList.remove('hidden');
+        bar1Element.classList.remove('bg-emerald-400');
+        bar1Element.classList.add('bg-emerald-500');
+        bar2Element.classList.remove('bg-blue-400');
+        bar2Element.classList.add('bg-blue-500');
+    } else {
+        winnerElement.textContent = 'Tie';
+        winnerElement.classList.remove('hidden');
+        bar1Element.classList.remove('bg-emerald-400');
+        bar1Element.classList.add('bg-emerald-500');
+        bar2Element.classList.remove('bg-blue-400');
+        bar2Element.classList.add('bg-blue-500');
+    }
+}
+
+/**
+ * Update the overall comparison verdict
+ */
+function updateComparisonVerdict(player1, player2) {
+    const attributes = ['pace', 'shooting', 'passing', 'dribbling', 'defending', 'physicality'];
+    
+    let player1Wins = 0;
+    let player2Wins = 0;
+    let ties = 0;
+    let totalStats1 = 0;
+    let totalStats2 = 0;
+    
+    attributes.forEach(attr => {
+        const val1 = player1.attributes?.[attr] || 0;
+        const val2 = player2.attributes?.[attr] || 0;
+        
+        totalStats1 += val1;
+        totalStats2 += val2;
+        
+        if (val1 > val2) player1Wins++;
+        else if (val2 > val1) player2Wins++;
+        else ties++;
+    });
+    
+    // Update total stats
+    document.getElementById('total-stats-1').textContent = totalStats1;
+    document.getElementById('total-stats-2').textContent = totalStats2;
+    
+    if (totalStats1 > totalStats2) {
+        document.getElementById('total-stats-winner').textContent = `${player1.name} has higher total stats`;
+    } else if (totalStats2 > totalStats1) {
+        document.getElementById('total-stats-winner').textContent = `${player2.name} has higher total stats`;
+    } else {
+        document.getElementById('total-stats-winner').textContent = 'Equal total stats';
+    }
+    
+    // Calculate value for money (stats per million)
+    const value1 = totalStats1 / player1.marketValue;
+    const value2 = totalStats2 / player2.marketValue;
+    
+    document.getElementById('value-1').textContent = value1.toFixed(1);
+    document.getElementById('value-2').textContent = value2.toFixed(1);
+    
+    if (value1 > value2) {
+        document.getElementById('value-winner').textContent = `${player1.name} is better value`;
+    } else if (value2 > value1) {
+        document.getElementById('value-winner').textContent = `${player2.name} is better value`;
+    } else {
+        document.getElementById('value-winner').textContent = 'Equal value for money';
+    }
+    
+    // Final verdict
+    if (player1Wins > player2Wins) {
+        document.getElementById('final-verdict').textContent = `${player1.name} Wins`;
+        document.getElementById('verdict-description').textContent = `${player1Wins} - ${player2Wins} (${ties} ties)`;
+    } else if (player2Wins > player1Wins) {
+        document.getElementById('final-verdict').textContent = `${player2.name} Wins`;
+        document.getElementById('verdict-description').textContent = `${player2Wins} - ${player1Wins} (${ties} ties)`;
+    } else {
+        document.getElementById('final-verdict').textContent = 'It\'s a Tie!';
+        document.getElementById('verdict-description').textContent = `Equal match: ${player1Wins} - ${player2Wins} (${ties} ties)`;
+    }
 }
 
 // ============================================
