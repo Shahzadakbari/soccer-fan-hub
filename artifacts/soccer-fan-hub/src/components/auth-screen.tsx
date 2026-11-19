@@ -144,7 +144,13 @@ export function AuthScreen({
 
               <div className="auth-field">
                 <label htmlFor="auth-username">{isSignUp ? 'Username' : 'Username'}</label>
-                <div className="auth-input-wrap">
+                <div
+                  className="auth-input-wrap"
+                  onClick={(event) => {
+                    const input = event.currentTarget.querySelector('input');
+                    if (event.target !== input) input?.focus();
+                  }}
+                >
                   <span className="auth-at" aria-hidden="true">@</span>
                   <input id="auth-username" type="text" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="Your manager handle" autoComplete="username" required disabled={busy} data-testid="input-auth-username" />
                 </div>
