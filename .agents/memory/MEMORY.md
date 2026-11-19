@@ -1,0 +1,1 @@
+- [Username field focus](username-field-focus.md) — The user confirmed the whole username box stays editable when clicked.
