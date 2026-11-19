@@ -1,7 +1,7 @@
 /**
  * TACTICHUB - Ultimate Football Squad & Tactics Hub
- * Phase 1, 2, 3 & 4: Full Authentication with True Per-Account Persistence
- * Global State and Core Functions
+ * SQLite Database Backend Version
+ * All data persistence now uses backend API instead of localStorage
  */
 
 // Global State Object
@@ -14,6 +14,9 @@ let managerState = {
 // Current user and authentication state
 let currentUser = null;
 let currentPlayerProfile = null;
+
+// API Configuration
+const API_BASE = 'http://localhost:3001/api';
 
 // Predefined Player Database
 const playerDatabase = [
@@ -362,16 +365,77 @@ const positionIcons = {
     'Goalkeeper': 'fa-hands'
 };
 
+// User notes storage (per-user scouting notes)
+let userNotes = {};
+
+// ============================================
+// API HELPER FUNCTIONS
+// ============================================
+
+/**
+ * Make a POST request to the API
+ */
+async function apiPost(endpoint, data) {
+    try {
+        const response = await fetch(`${API_BASE}${endpoint}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'API request failed');
+        }
+        
+        return await response.json();
+    } catch (error) {
+        console.error('API Error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Make a GET request to the API
+ */
+async function apiGet(endpoint) {
+    try {
+        const response = await fetch(`${API_BASE}${endpoint}`);
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'API request failed');
+        }
+        
+        return await response.json();
+    } catch (error) {
+        console.error('API Error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Check if the server is running
+ */
+async function checkServerStatus() {
+    try {
+        const result = await apiGet('/status');
+        return result.status === 'running';
+    } catch (error) {
+        return false;
+    }
+}
+
 // ============================================
 // AUTHENTICATION FUNCTIONS
 // ============================================
 
 /**
  * Switch between Sign In and Sign Up tabs
- * @param {string} tab - 'signin' or 'signup'
  */
 function switchAuthTab(tab) {
-    // Update tab buttons
     const signinTab = document.getElementById('signin-tab');
     const signupTab = document.getElementById('signup-tab');
     
@@ -387,7 +451,6 @@ function switchAuthTab(tab) {
         signinTab.classList.add('bg-slate-700', 'text-slate-400');
     }
     
-    // Show/hide forms
     document.getElementById('signin-form').classList.add('hidden');
     document.getElementById('signup-form').classList.add('hidden');
     
@@ -397,14 +460,11 @@ function switchAuthTab(tab) {
         document.getElementById('signup-form').classList.remove('hidden');
     }
     
-    // Clear feedback
     showAuthFeedback('', 'hidden');
 }
 
 /**
  * Show authentication feedback message
- * @param {string} message - The message to display
- * @param {string} type - 'success', 'error', or 'info'
  */
 function showAuthFeedback(message, type = 'info') {
     const feedbackEl = document.getElementById('auth-feedback');
@@ -414,7 +474,6 @@ function showAuthFeedback(message, type = 'info') {
         return;
     }
     
-    // Set message and styling based on type
     feedbackEl.textContent = message;
     feedbackEl.classList.remove('hidden', 'bg-red-500/20', 'text-red-400', 'bg-emerald-500/20', 'text-emerald-400', 'bg-blue-500/20', 'text-blue-400');
     
@@ -428,67 +487,9 @@ function showAuthFeedback(message, type = 'info') {
 }
 
 /**
- * Get all accounts from localStorage
- * @returns {Object} Dictionary of accounts mapped by username
- */
-function getAccountsFromStorage() {
-    const accounts = localStorage.getItem('tactichub_accounts');
-    return accounts ? JSON.parse(accounts) : {};
-}
-
-/**
- * Save accounts to localStorage
- * @param {Object} accounts - Dictionary of accounts
- */
-function saveAccountsToStorage(accounts) {
-    localStorage.setItem('tactichub_accounts', JSON.stringify(accounts));
-}
-
-/**
- * Get a specific account by username
- * @param {string} username - The username to look up
- * @returns {Object|null} The account object or null if not found
- */
-function getAccount(username) {
-    const accounts = getAccountsFromStorage();
-    return accounts[username] || null;
-}
-
-/**
- * Create a new account with fresh state
- * @param {string} username - The username
- * @param {string} password - The password
- * @param {string} managerName - The manager's name
- * @param {string} clubName - The club name
- * @returns {Object} The created account
- */
-function createAccount(username, password, managerName, clubName) {
-    const accounts = getAccountsFromStorage();
-    
-    // Create new account with fresh state
-    const newAccount = {
-        password: password,
-        managerName: managerName,
-        clubName: clubName,
-        data: {
-            budget: 500.0,
-            squad: [],
-            watchlist: []
-        }
-    };
-    
-    // Add to accounts dictionary
-    accounts[username] = newAccount;
-    saveAccountsToStorage(accounts);
-    
-    return newAccount;
-}
-
-/**
  * Handle Sign In form submission
- * @param {Event} event - The form submit event
  */
-function handleSignIn(event) {
+async function handleSignIn(event) {
     event.preventDefault();
     
     const username = document.getElementById('signin-username').value.trim();
@@ -499,29 +500,34 @@ function handleSignIn(event) {
         return;
     }
     
-    // Get account from storage
-    const account = getAccount(username);
-    
-    if (account && account.password === password) {
-        // Successful login - sign in the user
-        signInUser(username, account);
-        showAuthFeedback('Signing in...', 'success');
+    try {
+        showAuthFeedback('Signing in...', 'info');
         
-        // Switch to dashboard after a brief delay
-        setTimeout(() => {
-            switchView('dashboard');
-            showAuthFeedback('', 'hidden');
-        }, 500);
-    } else {
-        showAuthFeedback('Invalid username or password', 'error');
+        const response = await apiPost('/login', { username, password });
+        
+        if (response.success) {
+            // Store only username in sessionStorage
+            sessionStorage.setItem('tactichub_username', username);
+            
+            // Load user data
+            signInUser(response.user);
+            
+            showAuthFeedback('Signed in successfully!', 'success');
+            
+            setTimeout(() => {
+                switchView('dashboard');
+                showAuthFeedback('', 'hidden');
+            }, 500);
+        }
+    } catch (error) {
+        showAuthFeedback(error.message, 'error');
     }
 }
 
 /**
  * Handle Sign Up form submission
- * @param {Event} event - The form submit event
  */
-function handleSignUp(event) {
+async function handleSignUp(event) {
     event.preventDefault();
     
     const managerName = document.getElementById('signup-manager').value.trim();
@@ -529,7 +535,6 @@ function handleSignUp(event) {
     const username = document.getElementById('signup-username').value.trim();
     const password = document.getElementById('signup-password').value;
     
-    // Validation
     if (!managerName || !clubName || !username || !password) {
         showAuthFeedback('All fields are required', 'error');
         return;
@@ -540,86 +545,101 @@ function handleSignUp(event) {
         return;
     }
     
-    // Check if username already exists
-    const existingAccount = getAccount(username);
-    
-    if (existingAccount) {
-        showAuthFeedback('Username already taken', 'error');
-        return;
+    try {
+        showAuthFeedback('Creating account...', 'info');
+        
+        const response = await apiPost('/signup', {
+            username,
+            password,
+            managerName,
+            clubName
+        });
+        
+        if (response.success) {
+            // Store only username in sessionStorage
+            sessionStorage.setItem('tactichub_username', username);
+            
+            // Load user data
+            signInUser(response.user);
+            
+            showAuthFeedback('Account created! Signing in...', 'success');
+            
+            setTimeout(() => {
+                switchView('dashboard');
+                showAuthFeedback('', 'hidden');
+            }, 500);
+        }
+    } catch (error) {
+        showAuthFeedback(error.message, 'error');
     }
-    
-    // Create new account with fresh state
-    const newAccount = createAccount(username, password, managerName, clubName);
-    
-    // Auto sign in the new user
-    signInUser(username, newAccount);
-    
-    showAuthFeedback('Account created! Signing in...', 'success');
-    
-    // Switch to dashboard after a brief delay
-    setTimeout(() => {
-        switchView('dashboard');
-        showAuthFeedback('', 'hidden');
-    }, 500);
 }
 
 /**
  * Demo login - logs into a pre-made guest profile
  */
-function demoLogin() {
-    const demoUsername = 'demo';
-    const demoPassword = 'demo123';
-    
-    // Check if demo account exists, if not create it
-    let demoAccount = getAccount(demoUsername);
-    
-    if (!demoAccount) {
-        demoAccount = createAccount(
-            demoUsername,
-            demoPassword,
-            'Demo Manager',
-            'Demo FC'
-        );
+async function demoLogin() {
+    try {
+        showAuthFeedback('Logging in as Demo Manager...', 'info');
+        
+        // Try to login as demo user
+        try {
+            const response = await apiPost('/login', {
+                username: 'demo',
+                password: 'demo123'
+            });
+            
+            if (response.success) {
+                sessionStorage.setItem('tactichub_username', 'demo');
+                signInUser(response.user);
+                
+                setTimeout(() => {
+                    switchView('dashboard');
+                    showAuthFeedback('', 'hidden');
+                }, 500);
+                return;
+            }
+        } catch (error) {
+            // Demo user doesn't exist, create it
+            const response = await apiPost('/signup', {
+                username: 'demo',
+                password: 'demo123',
+                managerName: 'Demo Manager',
+                clubName: 'Demo FC'
+            });
+            
+            if (response.success) {
+                sessionStorage.setItem('tactichub_username', 'demo');
+                signInUser(response.user);
+                
+                setTimeout(() => {
+                    switchView('dashboard');
+                    showAuthFeedback('', 'hidden');
+                }, 500);
+            }
+        }
+    } catch (error) {
+        showAuthFeedback(error.message, 'error');
     }
-    
-    // Sign in the demo user
-    signInUser(demoUsername, demoAccount);
-    showAuthFeedback('Logging in as Demo Manager...', 'success');
-    
-    setTimeout(() => {
-        switchView('dashboard');
-        showAuthFeedback('', 'hidden');
-    }, 500);
 }
 
 /**
  * Sign in a user and load their saved state
- * @param {string} username - The username
- * @param {Object} account - The account object
  */
-function signInUser(username, account) {
-    // Save current user to localStorage
-    localStorage.setItem('tactichub_currentUser', JSON.stringify({
-        username: username,
-        managerName: account.managerName,
-        clubName: account.clubName
-    }));
-    
-    // Set current user
+function signInUser(userData) {
     currentUser = {
-        username: username,
-        managerName: account.managerName,
-        clubName: account.clubName
+        username: userData.username,
+        managerName: userData.managerName,
+        clubName: userData.clubName
     };
     
-    // Load user's saved state
     managerState = {
-        budget: account.data.budget,
-        squad: account.data.squad,
-        watchlist: account.data.watchlist
+        budget: userData.budget,
+        squad: userData.squad,
+        watchlist: userData.watchlist
     };
     
-    // Update UI
+    userNotes = userData.notes || {};
+    
     updateAuthUI();
     updateDashboardStats();
 }
@@ -631,48 +651,44 @@ function signOut() {
     // Save current progress before signing out
     saveUserProgress();
     
-    // Clear current user
-    localStorage.removeItem('tactichub_currentUser');
+    // Clear session
+    sessionStorage.removeItem('tactichub_username');
     currentUser = null;
     
-    // Reset manager state
+    // Reset state
     managerState = {
         budget: 500.0,
         squad: [],
         watchlist: []
     };
     
-    // Reset current player profile
+    userNotes = {};
     currentPlayerProfile = null;
     
-    // Update UI
     updateAuthUI();
-    
-    // Switch to auth view
     switchView('auth-view');
     
-    // Reset forms
     document.getElementById('signin-form').reset();
     document.getElementById('signup-form').reset();
     switchAuthTab('signin');
 }
 
 /**
- * Save current user's progress to localStorage
+ * Save current user's progress to the database
  */
-function saveUserProgress() {
+async function saveUserProgress() {
     if (!currentUser) return;
     
-    const accounts = getAccountsFromStorage();
-    const account = accounts[currentUser.username];
-    
-    if (account) {
-        account.data = {
+    try {
+        await apiPost('/save', {
+            username: currentUser.username,
             budget: managerState.budget,
             squad: managerState.squad,
-            watchlist: managerState.watchlist
-        };
-        saveAccountsToStorage(accounts);
+            watchlist: managerState.watchlist,
+            notes: userNotes
+        });
+    } catch (error) {
+        console.error('Failed to save progress:', error);
     }
 }
 
@@ -684,19 +700,18 @@ function updateAuthUI() {
     const profileSection = document.getElementById('profile-section');
     const profileBadge = document.getElementById('profile-badge');
     const signoutBtn = document.getElementById('signout-btn');
+    const dbStatus = document.getElementById('db-status');
     
     if (currentUser) {
-        // Show navigation and profile
         mainNav.classList.remove('hidden');
         profileSection.classList.remove('hidden');
         profileBadge.classList.remove('hidden');
         signoutBtn.classList.remove('hidden');
+        dbStatus.classList.remove('hidden');
         
-        // Update profile info
         document.getElementById('manager-name').textContent = currentUser.managerName;
         document.getElementById('club-name').textContent = currentUser.clubName;
         
-        // Update greeting based on time of day
         const hour = new Date().getHours();
         let greeting = 'Good evening';
         if (hour < 12) greeting = 'Good morning';
@@ -705,15 +720,31 @@ function updateAuthUI() {
         document.getElementById('greeting').textContent = `${greeting}, ${currentUser.managerName}.`;
         document.getElementById('dashboard-subtitle').textContent = `Welcome back to ${currentUser.clubName}!`;
     } else {
-        // Hide navigation and profile
         mainNav.classList.add('hidden');
         profileSection.classList.add('hidden');
         profileBadge.classList.add('hidden');
         signoutBtn.classList.add('hidden');
+        dbStatus.classList.add('hidden');
         
-        // Reset greeting
         document.getElementById('greeting').textContent = '';
         document.getElementById('dashboard-subtitle').textContent = 'Overview of your squad management and scouting activities';
+    }
+}
+
+/**
+ * Load user data from the server
+ */
+async function loadUserData(username) {
+    try {
+        const response = await apiGet(`/user/${username}`);
+        
+        if (response.success) {
+            return response.user;
+        }
+        return null;
+    } catch (error) {
+        console.error('Failed to load user data:', error);
+        return null;
     }
 }
 
@@ -723,35 +754,29 @@ function updateAuthUI() {
 
 /**
  * Switch between different views in the application
- * @param {string} viewName - The view to display
  */
 function switchView(viewName) {
-    // Check if user is authenticated (except for auth-view)
     if (viewName !== 'auth-view' && !currentUser) {
         switchView('auth-view');
         return;
     }
     
-    // Hide all view sections
     const viewSections = document.querySelectorAll('.view-section');
     viewSections.forEach(section => {
         section.classList.add('hidden');
     });
 
-    // Show the requested view
     const targetView = document.getElementById(viewName);
     if (targetView) {
         targetView.classList.remove('hidden');
     }
 
-    // Update active state on navigation buttons
     const navButtons = document.querySelectorAll('.nav-btn');
     navButtons.forEach(btn => {
         btn.classList.remove('bg-emerald-600', 'text-white');
         btn.classList.add('bg-slate-700', 'text-slate-200');
     });
 
-    // Highlight the active button
     const activeButton = Array.from(navButtons).find(btn => 
         btn.getAttribute('onclick')?.includes(`'${viewName}'`)
     );
@@ -760,17 +785,14 @@ function switchView(viewName) {
         activeButton.classList.add('bg-emerald-600', 'text-white');
     }
 
-    // Refresh dashboard stats when switching to dashboard
     if (viewName === 'dashboard') {
         updateDashboardStats();
     }
     
-    // Initialize player directory when switching to it
     if (viewName === 'player-directory') {
         renderPlayerDirectory();
     }
     
-    // Clear current player profile when leaving profile view
     if (viewName !== 'player-profile') {
         currentPlayerProfile = null;
     }
@@ -788,16 +810,12 @@ function renderPlayerDirectory() {
     const searchQuery = document.getElementById('player-search').value.toLowerCase();
     const positionFilter = document.getElementById('position-filter').value;
     
-    // Filter players
     const filteredPlayers = filterPlayersData(searchQuery, positionFilter);
     
-    // Update player count
     document.getElementById('player-count').textContent = filteredPlayers.length;
     
-    // Clear grid
     playerGrid.innerHTML = '';
     
-    // Render each player card
     filteredPlayers.forEach(player => {
         const isInWatchlist = managerState.watchlist.some(p => p.id === player.id);
         const isInSquad = managerState.squad.some(p => p.id === player.id);
@@ -872,7 +890,6 @@ function filterPlayers() {
     const searchQuery = document.getElementById('player-search').value.toLowerCase();
     const positionFilter = document.getElementById('position-filter').value;
     
-    // Filter and render
     renderPlayerDirectory();
 }
 
@@ -895,7 +912,6 @@ function filterPlayersData(searchQuery, positionFilter) {
 
 /**
  * Toggle a player in/out of the watchlist
- * @param {number} playerId - The ID of the player to toggle
  */
 function toggleWatchlist(playerId) {
     const player = playerDatabase.find(p => p.id === playerId);
@@ -904,60 +920,46 @@ function toggleWatchlist(playerId) {
     const indexInWatchlist = managerState.watchlist.findIndex(p => p.id === playerId);
     
     if (indexInWatchlist >= 0) {
-        // Remove from watchlist
         managerState.watchlist.splice(indexInWatchlist, 1);
     } else {
-        // Add to watchlist
         managerState.watchlist.push({ ...player });
     }
     
-    // Save progress
     saveUserProgress();
-    
-    // Update UI
     updateDashboardStats();
     renderPlayerDirectory();
 }
 
 /**
  * Add a player to the squad
- * @param {number} playerId - The ID of the player to add
  */
 function addToSquad(playerId) {
     const player = playerDatabase.find(p => p.id === playerId);
     if (!player) return;
     
-    // Check if already in squad
     const isInSquad = managerState.squad.some(p => p.id === playerId);
     if (isInSquad) {
         alert('This player is already in your squad!');
         return;
     }
     
-    // Check if affordable
     if (player.transferFee > managerState.budget) {
         alert(`Not enough budget! You need €${player.transferFee.toFixed(1)}M but only have €${managerState.budget.toFixed(1)}M remaining.`);
         return;
     }
     
-    // Add to squad and deduct budget
     managerState.squad.push({ ...player });
     managerState.budget -= player.transferFee;
     
-    // Save progress
     saveUserProgress();
-    
-    // Update UI
     updateDashboardStats();
     renderPlayerDirectory();
     
-    // Show success message
     alert(`✅ ${player.name} added to squad for €${player.transferFee.toFixed(1)}M!`);
 }
 
 /**
- * View a player's profile (navigate to player profile view)
- * @param {number} playerId - The ID of the player to view
+ * View a player's profile
  */
 function viewPlayerProfile(playerId) {
     const player = playerDatabase.find(p => p.id === playerId);
@@ -974,7 +976,6 @@ function viewPlayerProfile(playerId) {
 
 /**
  * Display a player's profile
- * @param {number} playerId - The ID of the player to display
  */
 function displayPlayerProfile(playerId) {
     const player = playerDatabase.find(p => p.id === playerId);
@@ -982,7 +983,6 @@ function displayPlayerProfile(playerId) {
     
     currentPlayerProfile = player;
     
-    // Update profile header
     document.getElementById('profile-name').textContent = player.name;
     document.getElementById('profile-club').textContent = player.club;
     document.getElementById('profile-value').textContent = `€${player.marketValue.toFixed(1)}M`;
@@ -990,7 +990,6 @@ function displayPlayerProfile(playerId) {
     document.getElementById('profile-nationality').textContent = player.nationality;
     document.getElementById('profile-age').textContent = player.age;
     
-    // Update position badge
     const positionBadge = document.getElementById('profile-position-badge');
     positionBadge.innerHTML = `
         <span class="${positionColors[player.position]} text-xs font-bold px-3 py-1 rounded-full uppercase">
@@ -998,7 +997,6 @@ function displayPlayerProfile(playerId) {
         </span>
     `;
     
-    // Update skill attributes
     if (player.attributes) {
         updateAttributeBar('pace', player.attributes.pace);
         updateAttributeBar('shooting', player.attributes.shooting);
@@ -1008,17 +1006,12 @@ function displayPlayerProfile(playerId) {
         updateAttributeBar('physicality', player.attributes.physicality);
     }
     
-    // Load and display scouting notes for this player
     loadScoutingNotes(playerId);
-    
-    // Clear the note input
     document.getElementById('scouting-note-input').value = '';
 }
 
 /**
  * Update a single attribute bar display
- * @param {string} attrName - The attribute name (pace, shooting, etc.)
- * @param {number} value - The attribute value (0-100)
  */
 function updateAttributeBar(attrName, value) {
     const valueEl = document.getElementById(`attr-${attrName}-value`);
@@ -1035,7 +1028,7 @@ function updateAttributeBar(attrName, value) {
 // ============================================
 
 /**
- * Save a scouting note to localStorage
+ * Save a scouting note
  */
 function saveScoutingNote() {
     if (!currentPlayerProfile) {
@@ -1056,11 +1049,18 @@ function saveScoutingNote() {
         return;
     }
     
-    // Get existing notes from localStorage
-    const storageKey = `scoutingNotes_${currentPlayerProfile.id}_${currentUser.username}`;
-    let notes = JSON.parse(localStorage.getItem(storageKey)) || [];
+    // Initialize notes for user if not exists
+    if (!userNotes[currentUser.username]) {
+        userNotes[currentUser.username] = {};
+    }
     
-    // Create new note object
+    // Initialize notes for this player if not exists
+    if (!userNotes[currentUser.username][currentPlayerProfile.id]) {
+        userNotes[currentUser.username][currentPlayerProfile.id] = [];
+    }
+    
+    const notes = userNotes[currentUser.username][currentPlayerProfile.id];
+    
     const newNote = {
         id: Date.now(),
         playerId: currentPlayerProfile.id,
@@ -1069,29 +1069,22 @@ function saveScoutingNote() {
         playerName: currentPlayerProfile.name
     };
     
-    // Add to notes array
     notes.push(newNote);
     
-    // Save back to localStorage
-    localStorage.setItem(storageKey, JSON.stringify(notes));
-    
-    // Clear input and refresh display
     noteInput.value = '';
     loadScoutingNotes(currentPlayerProfile.id);
     
+    saveUserProgress();
     alert('✅ Scouting note saved successfully!');
 }
 
 /**
- * Load scouting notes from localStorage and display them
- * @param {number} playerId - The player ID to load notes for
+ * Load scouting notes from userNotes
  */
 function loadScoutingNotes(playerId) {
     if (!currentUser) return;
     
-    const storageKey = `scoutingNotes_${playerId}_${currentUser.username}`;
-    const notes = JSON.parse(localStorage.getItem(storageKey)) || [];
-    
+    const notes = userNotes[currentUser.username]?.[playerId] || [];
     const notesList = document.getElementById('scouting-notes-list');
     
     if (notes.length === 0) {
@@ -1110,6 +1103,8 @@ function loadScoutingNotes(playerId) {
             minute: '2-digit'
         });
         
+        const noteIndex = notes.findIndex(n => n.id === note.id);
+        
         html += `
             <div class="bg-slate-700/50 rounded-lg p-4 border border-slate-600/50">
                 <div class="flex items-start justify-between mb-2">
@@ -1123,13 +1118,13 @@ function loadScoutingNotes(playerId) {
                 </div>
                 <div class="flex items-center justify-end space-x-2">
                     <button 
-                        onclick="editScoutingNote(${note.id}, ${note.playerId})"
+                        onclick="editScoutingNote(${note.id}, ${playerId})"
                         class="text-slate-400 hover:text-emerald-400 text-xs transition-colors"
                     >
                         <i class="fas fa-edit mr-1"></i> Edit
                     </button>
                     <button 
-                        onclick="deleteScoutingNote(${note.id}, ${note.playerId})"
+                        onclick="deleteScoutingNote(${note.id}, ${playerId})"
                         class="text-slate-400 hover:text-red-400 text-xs transition-colors"
                     >
                         <i class="fas fa-trash mr-1"></i> Delete
@@ -1144,44 +1139,32 @@ function loadScoutingNotes(playerId) {
 
 /**
  * Edit a scouting note
- * @param {number} noteId - The note ID to edit
- * @param {number} playerId - The player ID the note belongs to
  */
 function editScoutingNote(noteId, playerId) {
     if (!currentUser) return;
     
-    const storageKey = `scoutingNotes_${playerId}_${currentUser.username}`;
-    const notes = JSON.parse(localStorage.getItem(storageKey)) || [];
-    
+    const notes = userNotes[currentUser.username]?.[playerId] || [];
     const noteToEdit = notes.find(n => n.id === noteId);
     if (!noteToEdit) return;
     
-    // Prompt user for new content
     const newContent = prompt('Edit your scouting note:', noteToEdit.content);
-    if (newContent === null) return; // User cancelled
+    if (newContent === null) return;
     
     if (newContent.trim() === '') {
         alert('Note cannot be empty!');
         return;
     }
     
-    // Update the note
     noteToEdit.content = newContent.trim();
     noteToEdit.timestamp = new Date().toISOString();
     
-    // Save back to localStorage
-    localStorage.setItem(storageKey, JSON.stringify(notes));
-    
-    // Refresh display
     loadScoutingNotes(playerId);
-    
+    saveUserProgress();
     alert('✅ Scouting note updated successfully!');
 }
 
 /**
  * Delete a scouting note
- * @param {number} noteId - The note ID to delete
- * @param {number} playerId - The player ID the note belongs to
  */
 function deleteScoutingNote(noteId, playerId) {
     if (!currentUser) return;
@@ -1190,18 +1173,13 @@ function deleteScoutingNote(noteId, playerId) {
         return;
     }
     
-    const storageKey = `scoutingNotes_${playerId}_${currentUser.username}`;
-    let notes = JSON.parse(localStorage.getItem(storageKey)) || [];
+    const notes = userNotes[currentUser.username]?.[playerId] || [];
+    const filteredNotes = notes.filter(n => n.id !== noteId);
     
-    // Filter out the note to delete
-    notes = notes.filter(n => n.id !== noteId);
+    userNotes[currentUser.username][playerId] = filteredNotes;
     
-    // Save back to localStorage
-    localStorage.setItem(storageKey, JSON.stringify(notes));
-    
-    // Refresh display
     loadScoutingNotes(playerId);
-    
+    saveUserProgress();
     alert('✅ Scouting note deleted successfully!');
 }
 
@@ -1220,21 +1198,17 @@ function clearNoteInput() {
  * Calculate and update all dashboard statistics
  */
 function updateDashboardStats() {
-    // Calculate remaining budget display
     const budgetDisplay = `€${managerState.budget.toFixed(1)}M`;
     document.getElementById('stat-budget').textContent = budgetDisplay;
 
-    // Calculate squad value (sum of all squad players' market values)
     const squadValue = managerState.squad.reduce((total, player) => {
         return total + (player.marketValue || 0);
     }, 0);
     document.getElementById('stat-squad-val').textContent = `€${squadValue.toFixed(1)}M`;
 
-    // Update watchlist count
     const watchlistCount = managerState.watchlist.length;
     document.getElementById('stat-watchlist-count').textContent = watchlistCount;
 
-    // Calculate budget used percentage
     const budgetSpent = managerState.squad.reduce((total, player) => {
         return total + (player.transferFee || player.marketValue || 0);
     }, 0);
@@ -1242,19 +1216,15 @@ function updateDashboardStats() {
     const budgetUsedPercent = (budgetSpent / originalBudget * 100).toFixed(1);
     document.getElementById('stat-budget-percent').textContent = `${budgetUsedPercent}%`;
     
-    // Update budget bar width
     const budgetBar = document.getElementById('budget-bar');
     budgetBar.style.width = `${budgetUsedPercent}%`;
 
-    // Update watchlist display
     updateWatchlistDisplay();
-    
-    // Update squad display
     updateSquadDisplay();
 }
 
 /**
- * Update the watchlist container with current watchlist players
+ * Update the watchlist container
  */
 function updateWatchlistDisplay() {
     const watchlistContainer = document.getElementById('watchlist-container');
@@ -1289,7 +1259,7 @@ function updateWatchlistDisplay() {
 }
 
 /**
- * Update the squad container with current squad players
+ * Update the squad container
  */
 function updateSquadDisplay() {
     const squadContainer = document.getElementById('squad-container');
@@ -1325,41 +1295,29 @@ function updateSquadDisplay() {
 
 /**
  * Remove a player from the watchlist
- * @param {number} index - Index of the player in the watchlist array
  */
 function removeFromWatchlist(index) {
     managerState.watchlist.splice(index, 1);
-    
-    // Save progress
     saveUserProgress();
-    
     updateDashboardStats();
     renderPlayerDirectory();
 }
 
 /**
- * Sell a player from the squad, refunding their market value
- * @param {number} index - Index of the player in the squad array
+ * Sell a player from the squad
  */
 function sellPlayerFromSquad(index) {
     const player = managerState.squad[index];
     if (!player) return;
     
-    // Confirm with user
     if (!confirm(`Are you sure you want to sell ${player.name} for €${player.marketValue.toFixed(1)}M?`)) {
         return;
     }
     
-    // Refund the market value to budget
     managerState.budget += player.marketValue;
-    
-    // Remove player from squad
     managerState.squad.splice(index, 1);
     
-    // Save progress
     saveUserProgress();
-    
-    // Update UI
     updateDashboardStats();
     renderPlayerDirectory();
     
@@ -1367,7 +1325,7 @@ function sellPlayerFromSquad(index) {
 }
 
 /**
- * Export the current squad lineup as a CSV file
+ * Export the current squad as CSV
  */
 function exportSquadCSV() {
     if (managerState.squad.length === 0) {
@@ -1375,10 +1333,8 @@ function exportSquadCSV() {
         return;
     }
 
-    // Create CSV header
     let csv = 'Position,Name,Club,Market Value (M),Transfer Fee (M),Rating\n';
 
-    // Add each player as a row
     managerState.squad.forEach(player => {
         const row = [
             `"${player.position || 'N/A'}"`,
@@ -1391,7 +1347,6 @@ function exportSquadCSV() {
         csv += row + '\n';
     });
 
-    // Add summary row
     const squadValue = managerState.squad.reduce((total, player) => {
         return total + (player.marketValue || 0);
     }, 0);
@@ -1403,7 +1358,6 @@ function exportSquadCSV() {
     csv += `"Total Spent","€${totalSpent.toFixed(1)}M"\n`;
     csv += `"Remaining Budget","€${managerState.budget.toFixed(1)}M"\n`;
 
-    // Create and download the CSV file
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1420,36 +1374,29 @@ function exportSquadCSV() {
 // ============================================
 
 // Initialize the application when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    // Check for current user in localStorage
-    const savedUser = localStorage.getItem('tactichub_currentUser');
+document.addEventListener('DOMContentLoaded', async function() {
+    // Check for current user in sessionStorage
+    const username = sessionStorage.getItem('tactichub_username');
     
-    if (savedUser) {
-        currentUser = JSON.parse(savedUser);
-        
-        // Load user's saved state from accounts
-        const account = getAccount(currentUser.username);
-        
-        if (account) {
-            managerState = {
-                budget: account.data.budget,
-                squad: account.data.squad,
-                watchlist: account.data.watchlist
-            };
-        } else {
-            // Account doesn't exist, start fresh
-            managerState = {
-                budget: 500.0,
-                squad: [],
-                watchlist: []
-            };
+    if (username) {
+        try {
+            // Load user data from the server
+            const userData = await loadUserData(username);
+            
+            if (userData) {
+                signInUser(userData);
+            } else {
+                // User not found, clear session
+                sessionStorage.removeItem('tactichub_username');
+            }
+        } catch (error) {
+            console.error('Failed to load user data:', error);
+            sessionStorage.removeItem('tactichub_username');
         }
     }
     
-    // Update UI based on authentication state
     updateAuthUI();
     
-    // If user is authenticated, show dashboard; otherwise show auth view
     if (currentUser) {
         switchView('dashboard');
     } else {
@@ -1457,7 +1404,6 @@ document.addEventListener('DOMContentLoaded', function() {
         switchAuthTab('signin');
     }
     
-    // Initialize dashboard stats
     updateDashboardStats();
     
     console.log('TACTICHUB initialized successfully!');
@@ -1480,10 +1426,7 @@ if (typeof module !== 'undefined' && module.exports) {
         signInUser,
         signOut,
         saveUserProgress,
-        getAccountsFromStorage,
-        saveAccountsToStorage,
-        getAccount,
-        createAccount,
+        loadUserData,
         exportSquadCSV,
         filterPlayers,
         toggleWatchlist,
